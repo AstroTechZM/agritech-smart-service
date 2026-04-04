@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Public+Sans:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-headline: "Manrope", sans-serif;
+
+  --color-primary: #006e00;
+  --color-primary-container: #008a00;
+  --color-on-primary: #ffffff;
+  
+  --color-surface: #f7faf5;
+  --color-surface-container-low: #f1f4ef;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-high: #e6e9e4;
+  
+  --color-tertiary: #7c570d;
+  --color-tertiary-fixed-dim: #f0be6d;
+  
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-[#191c1a] font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline;
+  }
+}
+
+.glass-panel {
+  @apply backdrop-blur-xl bg-white/80 dark:bg-emerald-950/80;
+}
+
+.primary-gradient {
+  background: linear-gradient(135deg, #006e00 0%, #008a00 100%);
+}
