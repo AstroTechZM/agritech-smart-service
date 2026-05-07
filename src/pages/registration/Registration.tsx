@@ -37,6 +37,7 @@ export const Registration = () => {
   const [photoCaptured, setPhotoCaptured] = useState(false);
   const [capturedImageSrc, setCapturedImageSrc] = useState<string | null>(null);
   const [signatureCaptured, setSignatureCaptured] = useState(false);
+  const [capturedSignatureSrc, setCapturedSignatureSrc] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
   const [useSimulation, setUseSimulation] = useState(false);
@@ -314,10 +315,10 @@ export const Registration = () => {
               </div>
               <div className="space-y-4">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Digital Signature</p>
-                {signatureCaptured ? (
+                {signatureCaptured && capturedSignatureSrc ? (
                   <div className="aspect-square bg-surface-container-low rounded-3xl border border-black/5 flex flex-col items-center justify-center relative overflow-hidden">
-                     <p className="font-[satisfy] text-4xl text-neutral-800 -rotate-12">Mumba C.</p>
-                     <button onClick={() => setSignatureCaptured(false)} className="absolute top-4 right-4 p-2 bg-neutral-200 text-neutral-600 rounded-full hover:bg-neutral-300">
+                     <img src={capturedSignatureSrc} alt="Signature" className="w-full h-full object-contain p-4" />
+                     <button onClick={() => { setSignatureCaptured(false); setCapturedSignatureSrc(null); }} className="absolute top-4 right-4 p-2 bg-neutral-200 text-neutral-600 rounded-full hover:bg-neutral-300">
                       <X size={16} />
                     </button>
                     <div className="absolute bottom-4 bg-success/10 text-success px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
@@ -503,6 +504,11 @@ export const Registration = () => {
                 </button>
                 <button 
                   onClick={() => {
+                    const canvas = canvasRef.current;
+                    if (canvas) {
+                      const dataUrl = canvas.toDataURL('image/png');
+                      setCapturedSignatureSrc(dataUrl);
+                    }
                     setSignatureCaptured(true);
                     setShowSignature(false);
                   }}
