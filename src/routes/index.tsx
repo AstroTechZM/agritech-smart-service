@@ -12,6 +12,8 @@ import Payments from '@/src/pages/payments/Payments';
 import Security from '@/src/pages/security/Security';
 import FarmProduction from '@/src/pages/production/FarmProduction';
 import Wallet from '@/src/pages/wallet/Wallet';
+import Profile from '@/src/pages/profile/Profile';
+import Settings from '@/src/pages/settings/Settings';
 import { User, UserRole } from '@/src/types';
 
 interface RouterProps {
@@ -65,7 +67,7 @@ export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange }: Route
         },
         {
           path: 'wallet',
-          element: user?.role === UserRole.FARMER ? <Wallet /> : <Navigate to="/dashboard" replace />,
+          element: user?.role === UserRole.FARMER ? <Wallet user={user} /> : <Navigate to="/dashboard" replace />,
         },
         {
           path: 'security',
@@ -74,6 +76,14 @@ export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange }: Route
         {
           path: 'production',
           element: user ? <FarmProduction /> : <Navigate to="/login" />,
+        },
+        {
+          path: 'profile',
+          element: user ? <Profile user={user} onLogout={onLogout} /> : <Navigate to="/login" />,
+        },
+        {
+          path: 'settings',
+          element: user ? <Settings /> : <Navigate to="/login" />,
         },
       ],
     },

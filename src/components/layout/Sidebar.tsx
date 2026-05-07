@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Ticket, 
-  Package, 
-  Truck, 
-  Shield, 
-  Settings, 
-  LogOut, 
-  EyeOff, 
+import {
+  LayoutDashboard,
+  Users,
+  Ticket,
+  Package,
+  Truck,
+  Shield,
+  Settings,
+  LogOut,
+  EyeOff,
   Wallet,
   User as UserIcon,
   Sprout
@@ -126,14 +126,32 @@ export const Sidebar = ({ role, isOpen, onClose, onLogout }: SidebarProps) => {
             </div>
           </div>
           <div className="space-y-1">
-            <button className="w-full flex items-center gap-3 text-neutral-500 px-4 py-2.5 text-sm font-bold hover:text-primary transition-colors rounded-xl hover:bg-primary/5">
+            <NavLink 
+              to="/profile"
+              onClick={() => {
+                if (window.innerWidth < 1024) onClose();
+              }}
+              className={({ isActive }) => cn(
+                "w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold transition-colors rounded-xl",
+                isActive ? "text-primary bg-primary/10" : "text-neutral-500 hover:text-primary hover:bg-primary/5"
+              )}
+            >
               <UserIcon size={18} />
               Profile
-            </button>
-            <button className="w-full flex items-center gap-3 text-neutral-500 px-4 py-2.5 text-sm font-bold hover:text-primary transition-colors rounded-xl hover:bg-primary/5">
+            </NavLink>
+            <NavLink 
+              to="/settings"
+              onClick={() => {
+                if (window.innerWidth < 1024) onClose();
+              }}
+              className={({ isActive }) => cn(
+                "w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold transition-colors rounded-xl",
+                isActive ? "text-primary bg-primary/10" : "text-neutral-500 hover:text-primary hover:bg-primary/5"
+              )}
+            >
               <Settings size={18} />
               Settings
-            </button>
+            </NavLink>
             <button
               onClick={onLogout}
               className="w-full flex items-center gap-3 text-neutral-500 px-4 py-2.5 text-sm font-bold hover:text-error transition-colors rounded-xl hover:bg-error/5"

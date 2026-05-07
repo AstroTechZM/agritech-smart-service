@@ -1,38 +1,95 @@
-import React from 'react';
-import { Package, Download, Plus, MoreVertical } from 'lucide-react';
-import { cn } from '@/src/lib/utils';
-import { UserRole } from '@/src/types';
+/**
+ * REACT BEGINNER'S GUIDE:
+ * 
+ * 1. IMPORTS: These are like "buying tools from a hardware store." 
+ *    We bring in pieces of code from other files (like icons from 'lucide-react') 
+ *    so we don't have to build everything from scratch.
+ */
+import React, { useState } from 'react';
+import { Package, Download, Plus, MoreVertical, X } from 'lucide-react'; // Icons for the UI
+import { motion, AnimatePresence } from 'motion/react';
 
+import { cn } from '@/src/lib/utils'; // A utility to combine CSS class names easily
+import { UserRole } from '@/src/types'; // Information about the type of user (Admin, Dealer, etc.)
+
+/**
+ * 2. INTERFACE (TypeScript):
+ *    This is like a "Recipe" or a "Contract." It tells React exactly what kind of 
+ *    information this component expects to receive. Here, we expect a 'role'.
+ */
 interface StockProps {
   role: UserRole;
 }
 
+/**
+ * 3. THE COMPONENT (Stock):
+ *    In React, a "Component" is a self-contained piece of the website. 
+ *    Think of it like a "Lego block." This specific block handles the "Stock Management" screen.
+ * 
+ *    - 'role' is a "Prop" (short for Property). It's like a parameter passed to a function.
+ */
 export const Stock = ({ role }: StockProps) => {
+  // 4. LOGIC: We calculate things here before showing them to the user.
   const isDealer = role === UserRole.AGRO_DEALER;
   const isClerk = role === UserRole.AGENT;
 
-  const stockItems = [
+  // 5. DATA: Usually this comes from a database, but here we hardcoded it for the demo.
+  // This is an array of objects representing items in the warehouse.
+  const [stockItems, setStockItems] = useState([
     { name: 'D-Compound Fertilizer', qty: 450, unit: 'Bags', status: 'STABLE' },
     { name: 'Urea Fertilizer', qty: 120, unit: 'Bags', status: 'LOW' },
     { name: 'Maize Seed (10kg)', qty: 85, unit: 'Packs', status: 'STABLE' },
     { name: 'Soybean Seed (25kg)', qty: 12, unit: 'Packs', status: 'LOW' },
-  ];
+  ]);
 
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemQty, setNewItemQty] = useState('');
+  const [newItemUnit, setNewItemUnit] = useState('Bags');
+
+  const handleAddStock = () => {
+    if (!newItemName || !newItemQty) return;
+    const qty = parseInt(newItemQty);
+    const newItem = {
+      name: newItemName,
+      qty,
+      unit: newItemUnit,
+      status: qty > 50 ? 'STABLE' : 'LOW'
+    };
+    setStockItems([newItem, ...stockItems]);
+    setShowAddModal(false);
+    setNewItemName('');
+    setNewItemQty('');
+  };
+
+  /**
+   * 6. THE RETURN STATEMENT (JSX):
+   *    This looks like HTML, but it's actually "JSX." It describes what the UI 
+   *    should look like. React converts this into real HTML for the browser.
+   */
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* HEADER SECTION: Title and Action Buttons */}
       <div className="flex justify-between items-end">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">
+            {/* CONDITIONAL RENDERING: "If this, show that." */}
             {isClerk ? 'Depot Inventory' : isDealer ? 'Shop Inventory' : 'Regional Stock'}
           </span>
           <h2 className="text-3xl font-black font-headline tracking-tight">Stock Management</h2>
         </div>
+        
         <div className="flex gap-3">
           <button className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2">
             <Download size={16} /> Export
           </button>
+          
+          {/* MORE CONDITIONAL RENDERING: Only show "Add Stock" for Clerks or Dealers */}
           {(isClerk || isDealer) && (
-            <button className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-primary/20">
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-primary/20">
               <Plus size={16} /> Add Stock
             </button>
           )}
@@ -40,6 +97,7 @@ export const Stock = ({ role }: StockProps) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* MAIN TABLE SECTION */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-surface-container-lowest rounded-[2.5rem] border border-black/5 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -49,10 +107,15 @@ export const Stock = ({ role }: StockProps) => {
                     <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Item Name</th>
                     <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Quantity</th>
                     <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Status</th>
-                    <th className="px-6 py-4 text-[10px) font-bold uppercase tracking-widest text-neutral-500">Action</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5">
+                  {/**
+                   * 7. MAPPING: This is how we loop through the 'stockItems' list.
+                   *    For every item in the list, we create a new table row (<tr>).
+                   *    'key' is a unique ID so React can track each row.
+                   */}
                   {stockItems.map((item) => (
                     <tr key={item.name} className="hover:bg-primary/5 transition-colors group">
                       <td className="px-6 py-4">
@@ -70,6 +133,7 @@ export const Stock = ({ role }: StockProps) => {
                       <td className="px-6 py-4">
                         <span className={cn(
                           "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
+                          // Dynamic styling based on stock status
                           item.status === 'STABLE' ? "bg-primary/10 text-primary" : "bg-error/10 text-error"
                         )}>
                           {item.status}
@@ -88,10 +152,12 @@ export const Stock = ({ role }: StockProps) => {
           </div>
         </div>
 
+        {/* SIDEBAR SECTION: Insights */}
         <div className="space-y-6">
           <div className="bg-primary-container p-8 rounded-[2.5rem] text-white shadow-xl shadow-primary/20">
             <h4 className="text-lg font-bold font-headline mb-4">Stock Insights</h4>
             <div className="space-y-6">
+              {/* Progress Bar 1 */}
               <div>
                 <div className="flex justify-between text-xs font-bold mb-2">
                   <span>Fertilizer Capacity</span>
@@ -101,6 +167,8 @@ export const Stock = ({ role }: StockProps) => {
                   <div className="h-full bg-white w-[82%] rounded-full" />
                 </div>
               </div>
+              
+              {/* Progress Bar 2 */}
               <div>
                 <div className="flex justify-between text-xs font-bold mb-2">
                   <span>Seed Availability</span>
@@ -111,14 +179,93 @@ export const Stock = ({ role }: StockProps) => {
                 </div>
               </div>
             </div>
+            
             <button className="w-full mt-8 bg-white text-primary py-3 rounded-2xl font-bold text-sm hover:bg-opacity-90 transition-all">
               Request Restock
             </button>
           </div>
         </div>
       </div>
+
+      {/* ADD STOCK MODAL */}
+      <AnimatePresence>
+        {showAddModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-surface-container-lowest p-8 rounded-[3rem] w-full max-w-md shadow-2xl relative border border-black/5"
+            >
+              <button 
+                onClick={() => setShowAddModal(false)}
+                className="absolute top-6 right-6 p-2 text-neutral-400 hover:bg-black/5 rounded-full"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="mb-8">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Inventory</span>
+                <h3 className="text-3xl font-black font-headline text-neutral-900">Add Stock</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase text-neutral-500">Item Name</label>
+                  <input 
+                    type="text" 
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    placeholder="e.g. Tomato Seeds"
+                    className="w-full bg-surface-container-low border-none rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-neutral-500">Quantity</label>
+                    <input 
+                      type="number" 
+                      value={newItemQty}
+                      onChange={(e) => setNewItemQty(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-surface-container-low border-none rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-neutral-500">Unit</label>
+                    <select 
+                      value={newItemUnit}
+                      onChange={(e) => setNewItemUnit(e.target.value)}
+                      className="w-full bg-surface-container-low border-none rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                    >
+                      <option>Bags</option>
+                      <option>Packs</option>
+                      <option>Bottles</option>
+                      <option>Kg</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleAddStock}
+                  className="w-full mt-4 bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-primary/20"
+                >
+                  <Plus size={20} /> Save Item
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
+// 8. EXPORT: This makes the component available to be used in other files.
 export default Stock;

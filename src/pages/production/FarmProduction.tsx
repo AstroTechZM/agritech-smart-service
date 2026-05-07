@@ -1,24 +1,39 @@
+/**
+ * REACT BEGINNER'S GUIDE:
+ * 
+ * 1. NESTED MAPPING:
+ *    - Sometimes we have a list inside another list. 
+ *    - We use .map() twice: once for the main category and once for the items inside.
+ */
 import React, { useState } from 'react';
-import { 
-  Sprout, 
-  History, 
-  TrendingUp, 
-  Calendar, 
-  AlertCircle, 
-  ChevronRight, 
-  Plus, 
+import {
+  Sprout,
+  History,
+  TrendingUp,
+  Calendar,
+  AlertCircle,
+  ChevronRight,
+  Plus,
   Info,
   CheckCircle2,
   Leaf
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/src/lib/utils';
-import { MOCK_FARM_PRODUCTION, MOCK_AGRONOMY_INSIGHTS } from '@/src/data/mockData';
+} from 'lucide-react'; // Icons for the UI
+import { motion, AnimatePresence } from 'motion/react'; // Animations
+import { cn } from '@/src/lib/utils'; // Styling helper
+import { MOCK_FARM_PRODUCTION, MOCK_AGRONOMY_INSIGHTS } from '@/src/data/mockData'; // Data
 
+/**
+ * 2. COMPONENT: FarmProduction
+ *    Tracks crop growth, yields, and agronomy advice.
+ */
 export const FarmProduction = () => {
+  // 3. MULTIPLE STATES: 
+  //    - 'selectedSeason' tracks which year we are looking at.
+  //    - 'selectedProduction' tracks which crop record is clicked for details.
   const [selectedSeason, setSelectedSeason] = useState('2025-2026');
   const [selectedProduction, setSelectedProduction] = useState<any>(null);
-  
+
+  // Data for the summary boxes at the top
   const stats = [
     { label: 'Total Area', value: '2.5 Ha', icon: Sprout, color: 'text-primary' },
     { label: 'Current Yield Est.', value: '6,250 kg', icon: TrendingUp, color: 'text-tertiary' },
@@ -27,7 +42,8 @@ export const FarmProduction = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
+
+      {/* HEADER SECTION */}
       <div className="flex justify-between items-end">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Private Farm Records</span>
@@ -38,7 +54,7 @@ export const FarmProduction = () => {
         </button>
       </div>
 
-      {/* Stats Grid */}
+      {/* STATS GRID: Summary overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {stats.map((stat) => (
           <div key={stat.label} className="bg-surface-container-lowest p-6 rounded-[2.5rem] border border-black/5 shadow-sm">
@@ -52,7 +68,8 @@ export const FarmProduction = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Recommendations & Seasonal Guide */}
+
+        {/* AGRONOMY INSIGHTS SECTION */}
         <div className="lg:col-span-12 space-y-8">
           <div className="bg-surface-container-lowest p-8 rounded-[3rem] border border-black/5 shadow-sm">
             <div className="flex items-center gap-3 mb-8">
@@ -60,17 +77,17 @@ export const FarmProduction = () => {
                 <Info size={20} />
               </div>
               <div>
-                <h3 className="text-xl font-bold font-headline">Agronomy Insights</h3>
-                <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider mt-0.5">Personalized Recommendations</p>
+                <h3 className="text-xl font-bold font-headline">Expert Insights</h3>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {MOCK_AGRONOMY_INSIGHTS.map((insight) => (
-                <div 
+                <div
                   key={insight.id}
                   className={cn(
                     "p-6 rounded-[2rem] border transition-all hover:shadow-md",
+                    // Conditional styling based on priority
                     insight.priority === 'HIGH' ? "bg-primary/5 border-primary/10" : "bg-surface-container-low border-black/5"
                   )}
                 >
@@ -85,6 +102,8 @@ export const FarmProduction = () => {
                   </div>
                   <h4 className="font-bold text-lg mb-2 leading-tight">{insight.title}</h4>
                   <p className="text-xs text-neutral-600 font-medium leading-relaxed mb-4">{insight.content}</p>
+
+                  {/* NESTED MAPPING: Looping through 'tags' inside each 'insight' */}
                   <div className="flex flex-wrap gap-2">
                     {insight.tags.map(tag => (
                       <span key={tag} className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-lg">#{tag}</span>
@@ -96,7 +115,7 @@ export const FarmProduction = () => {
           </div>
         </div>
 
-        {/* Bottom Section: History */}
+        {/* PRODUCTION HISTORY SECTION */}
         <div className="lg:col-span-12">
           <div className="bg-surface-container-lowest p-8 rounded-[3rem] border border-black/5 shadow-sm">
             <div className="flex justify-between items-center mb-8">
@@ -109,8 +128,9 @@ export const FarmProduction = () => {
                   <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider mt-0.5">Historical Yields & Sales</p>
                 </div>
               </div>
+
+              {/* SEASON TOGGLE: Changes 'selectedSeason' state */}
               <div className="relative">
-                {/* Desktop Toggle */}
                 <div className="hidden sm:flex bg-surface-container-low p-1 rounded-2xl">
                   {['2025-2026', '2024-2025', '2023-2024'].map((s) => (
                     <button
@@ -126,7 +146,7 @@ export const FarmProduction = () => {
                   ))}
                 </div>
 
-                {/* Mobile Dropdown */}
+                {/* Mobile Dropdown version of the same toggle */}
                 <div className="sm:hidden relative">
                   <select
                     value={selectedSeason}
@@ -145,9 +165,13 @@ export const FarmProduction = () => {
             </div>
 
             <div className="space-y-4">
+              {/**
+               * 4. FILTERED LIST: 
+               *    We only show records that match the 'selectedSeason'.
+               */}
               {MOCK_FARM_PRODUCTION.filter(p => p.season === selectedSeason).length > 0 ? (
                 MOCK_FARM_PRODUCTION.filter(p => p.season === selectedSeason).map((record) => (
-                  <div 
+                  <div
                     key={record.id}
                     onClick={() => setSelectedProduction(record)}
                     className="flex flex-col md:flex-row md:items-center justify-between p-6 bg-surface-container-low rounded-[2rem] border border-black/5 hover:border-primary/20 transition-all group cursor-pointer"
@@ -187,6 +211,7 @@ export const FarmProduction = () => {
                   </div>
                 ))
               ) : (
+                // What to show if the filtered list is empty
                 <div className="text-center py-12 bg-surface-container-low rounded-[2.5rem] border border-dashed border-black/10">
                   <AlertCircle size={48} className="mx-auto text-neutral-200 mb-4" />
                   <p className="text-neutral-400 font-bold uppercase tracking-widest">No records found for this season</p>
@@ -197,6 +222,7 @@ export const FarmProduction = () => {
         </div>
       </div>
 
+      {/* PRODUCTION MODAL: Detailed View */}
       <AnimatePresence>
         {selectedProduction && (
           <motion.div
@@ -218,17 +244,17 @@ export const FarmProduction = () => {
                 <div className="flex justify-between items-start mb-8">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                       <span className={cn(
-                          "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                          selectedProduction.status === 'GROWING' ? "bg-primary text-white" : "bg-tertiary text-white"
-                        )}>
-                          {selectedProduction.status}
-                        </span>
-                        <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Season {selectedProduction.season}</span>
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                        selectedProduction.status === 'GROWING' ? "bg-primary text-white" : "bg-tertiary text-white"
+                      )}>
+                        {selectedProduction.status}
+                      </span>
+                      <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Season {selectedProduction.season}</span>
                     </div>
                     <h3 className="text-3xl font-black font-headline tracking-tight">{selectedProduction.crop}</h3>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setSelectedProduction(null)}
                     className="p-3 bg-surface-container-low hover:bg-black/5 rounded-2xl transition-colors"
                   >
@@ -236,16 +262,21 @@ export const FarmProduction = () => {
                   </button>
                 </div>
 
+                {/**
+                 * 5. COMPLEX CONDITIONAL CONTENT:
+                 *    - If the crop is 'GROWING', we show a progress bar.
+                 *    - If it's already harvested ('SOLD'), we show yield analytics.
+                 */}
                 {selectedProduction.status === 'GROWING' ? (
                   <div className="space-y-8">
-                    {/* Progress Bar */}
+                    {/* Progress Bar Animation */}
                     <div className="space-y-4">
                       <div className="flex justify-between items-end">
                         <p className="text-xs font-black uppercase tracking-widest text-primary">Growth Progress</p>
                         <p className="text-2xl font-black text-primary">65%</p>
                       </div>
                       <div className="h-4 bg-black/5 rounded-full overflow-hidden p-1">
-                        <motion.div 
+                        <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: '65%' }}
                           className="h-full bg-primary rounded-full shadow-sm"
@@ -260,7 +291,7 @@ export const FarmProduction = () => {
                       </div>
                     </div>
 
-                    {/* Operational Tasks */}
+                    {/* Operational Tasks Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="p-6 bg-primary/5 border border-primary/10 rounded-[2rem]">
                         <div className="flex items-center gap-3 mb-4 text-primary">
@@ -271,7 +302,7 @@ export const FarmProduction = () => {
                         <p className="text-xs text-neutral-600 font-medium leading-relaxed">Due in 3 days. Soil moisture levels are currently optimal for application.</p>
                       </div>
                       <div className="p-6 bg-surface-container-low rounded-[2rem] flex flex-col justify-between">
-                         <div className="flex items-center gap-3 mb-4 text-neutral-500">
+                        <div className="flex items-center gap-3 mb-4 text-neutral-500">
                           <Calendar size={20} />
                           <p className="font-black text-xs uppercase tracking-widest">Last Activity</p>
                         </div>
@@ -285,57 +316,60 @@ export const FarmProduction = () => {
                     </button>
                   </div>
                 ) : (
+                  // Historical View (If status is not GROWING)
                   <div className="space-y-8">
-                     {/* Historical Analytics */}
-                     <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-surface-container-low p-4 rounded-3xl text-center">
-                          <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mb-1">Net Yield</p>
-                          <p className="text-lg font-black text-neutral-900">{selectedProduction.yield.toLocaleString()} KG</p>
-                        </div>
-                        <div className="bg-surface-container-low p-4 rounded-3xl text-center">
-                          <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mb-1">Area Cultivated</p>
-                          <p className="text-lg font-black text-neutral-900">{selectedProduction.area} Ha</p>
-                        </div>
-                        <div className="bg-surface-container-low p-4 rounded-3xl text-center">
-                          <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mb-1">Performance</p>
-                          <p className="text-lg font-black text-success">+12%</p>
-                        </div>
-                     </div>
+                    {/* Data summary boxes */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-surface-container-low p-4 rounded-3xl text-center">
+                        <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mb-1">Net Yield</p>
+                        <p className="text-lg font-black text-neutral-900">{selectedProduction.yield.toLocaleString()} KG</p>
+                      </div>
+                      <div className="bg-surface-container-low p-4 rounded-3xl text-center">
+                        <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mb-1">Area Cultivated</p>
+                        <p className="text-lg font-black text-neutral-900">{selectedProduction.area} Ha</p>
+                      </div>
+                      <div className="bg-surface-container-low p-4 rounded-3xl text-center">
+                        <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mb-1">Performance</p>
+                        <p className="text-lg font-black text-success">+12%</p>
+                      </div>
+                    </div>
 
-                     <div className="p-8 bg-surface-container-low rounded-[2.5rem] border border-black/5 relative overflow-hidden">
-                        <h4 className="text-lg font-bold mb-4 relative z-10 text-neutral-900">Yield Benchmarking</h4>
-                        <div className="space-y-4 relative z-10">
-                          {[
-                            { year: '2025', val: 100, active: true },
-                            { year: '2024', val: 82 },
-                            { year: '2023', val: 65 },
-                          ].map(bar => (
-                            <div key={bar.year} className="flex items-center gap-4">
-                               <span className="text-[10px] font-black text-neutral-400 w-8">{bar.year}</span>
-                               <div className="flex-1 h-3 bg-black/5 rounded-full overflow-hidden">
-                                  <motion.div 
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${bar.val}%` }}
-                                    className={cn("h-full rounded-full transition-all", bar.active ? "bg-primary" : "bg-neutral-300")}
-                                  />
-                               </div>
-                               <span className="text-[10px] font-black text-neutral-900 w-12 text-right">{bar.val * 62.5} KG</span>
+                    {/* Comparative Bar Chart inside the modal */}
+                    <div className="p-8 bg-surface-container-low rounded-[2.5rem] border border-black/5 relative overflow-hidden">
+                      <h4 className="text-lg font-bold mb-4 relative z-10 text-neutral-900">Yield Benchmarking</h4>
+                      <div className="space-y-4 relative z-10">
+                        {[
+                          { year: '2025', val: 100, active: true },
+                          { year: '2024', val: 82 },
+                          { year: '2023', val: 65 },
+                        ].map(bar => (
+                          <div key={bar.year} className="flex items-center gap-4">
+                            <span className="text-[10px] font-black text-neutral-400 w-8">{bar.year}</span>
+                            <div className="flex-1 h-3 bg-black/5 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${bar.val}%` }}
+                                className={cn("h-full rounded-full transition-all", bar.active ? "bg-primary" : "bg-neutral-300")}
+                              />
                             </div>
-                          ))}
-                        </div>
-                        <div className="absolute top-0 right-0 p-8 text-neutral-100 -mr-16 -mt-16">
-                           <TrendingUp size={160} />
-                        </div>
-                     </div>
+                            <span className="text-[10px] font-black text-neutral-900 w-12 text-right">{bar.val * 62.5} KG</span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Background watermark icon */}
+                      <div className="absolute top-0 right-0 p-8 text-neutral-100 -mr-16 -mt-16">
+                        <TrendingUp size={160} />
+                      </div>
+                    </div>
 
-                     <div className="flex gap-4">
-                        <button className="flex-1 bg-surface-container-low hover:bg-black/5 py-4 rounded-2xl font-bold text-xs transition-colors flex items-center justify-center gap-2">
-                           Logistical Data <ChevronRight size={16} />
-                        </button>
-                        <button className="flex-1 bg-primary text-white py-4 rounded-2xl font-bold text-xs shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
-                           Export Performance Report <Info size={16} />
-                        </button>
-                     </div>
+                    <div className="flex gap-4">
+                      <button className="flex-1 bg-surface-container-low hover:bg-black/5 py-4 rounded-2xl font-bold text-xs transition-colors flex items-center justify-center gap-2">
+                        Logistical Data <ChevronRight size={16} />
+                      </button>
+                      <button className="flex-1 bg-primary text-white py-4 rounded-2xl font-bold text-xs shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                        Export Performance Report <Info size={16} />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

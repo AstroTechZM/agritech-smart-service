@@ -1,12 +1,25 @@
+/**
+ * REACT BEGINNER'S GUIDE:
+ * 
+ * 1. RESPONSIVE DESIGN IN REACT (JSX):
+ *    - We use prefixes like 'sm:' or 'lg:' to change how things look on different screens.
+ *    - In React, we can also use these classes to hide/show elements based on device size.
+ */
 import React, { useState } from 'react';
-import { Map as MapIcon, ChevronRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/src/lib/utils';
-import { MOCK_DELIVERIES } from '@/src/data/mockData';
+import { Map as MapIcon, ChevronRight } from 'lucide-react'; // Icons
+import { motion, AnimatePresence } from 'motion/react'; // Animations
+import { cn } from '@/src/lib/utils'; // Styling helper
+import { MOCK_DELIVERIES } from '@/src/data/mockData'; // Mock data (simulated database)
 
+/**
+ * 2. COMPONENT: Deliveries
+ *    Shows a history of crop deliveries and their payment status.
+ */
 export const Deliveries = () => {
+  // 3. STATE: Tracks which delivery is currently "clicked" to show details.
   const [selectedDelivery, setSelectedDelivery] = useState<any>(null);
 
+  // 4. DATA: We pull our list of deliveries from a separate data file.
   const deliveries = MOCK_DELIVERIES;
 
   return (
@@ -21,6 +34,7 @@ export const Deliveries = () => {
           </div>
         </div>
 
+        {/* 5. GRID SYSTEM: 1 column on mobile, 2 on tablets, 3 on large screens. */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {deliveries.map((del) => (
             <div
@@ -31,6 +45,7 @@ export const Deliveries = () => {
               <div className="flex-1">
                 <div className="flex items-center justify-between sm:justify-start gap-2 mb-2">
                   <div className="text-[10px] uppercase font-black tracking-widest text-neutral-400">{del.date}</div>
+                  {/* HIDING/SHOWING: This tag only shows on tiny mobile screens ('sm:hidden') */}
                   <span className={cn(
                     "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest sm:hidden",
                     del.paymentStatus === 'PAID' ? "bg-tertiary/10 text-tertiary" :
@@ -42,11 +57,13 @@ export const Deliveries = () => {
                 <p className="font-bold text-lg mb-1 group-hover:text-primary transition-colors">{del.produceType}</p>
                 <div className="text-[10px] uppercase font-bold tracking-widest text-neutral-500 flex items-center gap-1"><MapIcon size={10} /> {del.depot}</div>
               </div>
+
               <div className="flex items-center justify-between sm:flex-col sm:items-end gap-3 pt-4 sm:pt-0 border-t sm:border-none border-black/5">
                 <div className="text-right sm:text-right">
                   <p className="text-[10px] font-bold text-neutral-400 uppercase leading-none mb-1">Estimated Payout</p>
                   <p className="text-lg font-black font-mono text-primary leading-none">{del.amount}</p>
                 </div>
+                {/* HIDING/SHOWING: This tag is hidden on mobile, but shows on larger screens ('hidden sm:inline-block') */}
                 <span className={cn(
                   "hidden sm:inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
                   del.paymentStatus === 'PAID' ? "bg-tertiary/10 text-tertiary" :
@@ -62,6 +79,7 @@ export const Deliveries = () => {
         </div>
       </div>
 
+      {/* 6. MODAL SYSTEM: Explained in Logistics.tsx but used here as well. */}
       <AnimatePresence>
         {selectedDelivery && (
           <motion.div

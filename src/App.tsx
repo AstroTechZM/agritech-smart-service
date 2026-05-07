@@ -4,6 +4,8 @@ import { User, UserRole } from '@/src/types';
 import { MOCK_USERS } from '@/src/data/mockData';
 import { createAppRouter } from '@/src/routes';
 
+import { WalletProvider } from '@/src/context/WalletContext';
+
 export const App = () => {
   // Authentication State
   const [user, setUser] = useState<User | null>(() => {
@@ -45,7 +47,11 @@ export const App = () => {
     onRoleChange: handleRoleChange,
   });
 
-  return <RouterProvider router={router} />;
+  return (
+    <WalletProvider>
+      <RouterProvider router={router} />
+    </WalletProvider>
+  );
 };
 
 export default App;

@@ -1,25 +1,36 @@
+/**
+ * REACT BEGINNER'S GUIDE:
+ * 
+ * 1. IMPORTS & LIBRARIES:
+ *    - 'useNavigate' is a tool from React Router that lets us move between pages.
+ *    - 'lucide-react' provides the beautiful icons you see on the dashboard.
+ */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, TrendingUp, Ticket, Package, CheckCircle2, ChevronRight, ArrowRight, Sprout } from 'lucide-react';
-import { MOCK_DELIVERIES, MOCK_TRANSACTIONS } from '@/src/data/mockData';
+import { MOCK_DELIVERIES } from '@/src/data/mockData';
 import { cn } from '@/src/lib/utils';
 
+/**
+ * 2. COMPONENT: FarmerDashboard
+ *    This is the main screen a Farmer sees when they log in.
+ */
 export const FarmerDashboard = () => {
+  // 'navigate' is our function for jumping to other pages like '/wallet'
   const navigate = useNavigate();
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-end">
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Zambia Ministry of Agriculture</span>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Zambia Ministry of Agriculture</span>
           <h2 className="text-3xl font-black font-headline tracking-tight">Mumba Chileshe</h2>
-          <p className="text-sm text-neutral-500">NRC: 102934/11/1</p>
         </div>
-        <span className="px-4 py-1.5 bg-primary/10 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full border border-primary/20">
-          FISP ELIGIBLE
-        </span>
       </div>
 
+      {/* 3. LAYOUT (Grid): 
+          We use 'grid' to put things side-by-side. 
+          'md:grid-cols-3' means 3 columns on medium screens (laptops), but 1 column on phones. */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 primary-gradient p-8 rounded-3xl text-white shadow-2xl shadow-primary/20 relative overflow-hidden">
           <div className="relative z-10 space-y-6">
@@ -28,7 +39,7 @@ export const FarmerDashboard = () => {
               <Wallet size={24} className="opacity-80" />
             </div>
             <h3 className="text-5xl font-black font-headline">ZMW 4,850.00</h3>
-            <button 
+            <button
               onClick={() => navigate('/wallet')}
               className="w-full bg-white/20 backdrop-blur-md border border-white/10 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-white/30 transition-all font-headline"
             >
@@ -68,7 +79,7 @@ export const FarmerDashboard = () => {
           <h3 className="text-lg font-bold leading-tight">Optimal Planting Window: Maize</h3>
           <p className="text-sm text-neutral-600 font-medium mt-1">Current soil moisture levels are optimal. Consider starting sowing this week for better results.</p>
         </div>
-        <button 
+        <button
           onClick={() => navigate('/production')}
           className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-primary shadow-sm hover:shadow-md transition-all flex items-center gap-2"
         >
@@ -78,38 +89,6 @@ export const FarmerDashboard = () => {
 
       {/* Financial Activity & Deliveries Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Recent Activity */}
-        <section className="lg:col-span-12 space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold font-headline flex items-center gap-2 text-neutral-900">
-              <Wallet size={20} className="text-primary" />
-              Recent Activity
-            </h3>
-            <button onClick={() => navigate('/wallet')} className="text-xs font-bold text-primary">All Transactions</button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {MOCK_TRANSACTIONS.slice(0, 3).map((tx) => (
-              <div key={tx.id} className="bg-surface-container-lowest p-5 rounded-3xl border border-black/5 shadow-sm hover:shadow-md transition-shadow">
-                 <div className="flex justify-between items-start mb-4">
-                    <div className={cn(
-                      "p-2 rounded-xl",
-                      tx.type === 'PAYOUT' ? "bg-success/10 text-success" : "bg-neutral-100 text-neutral-500"
-                    )}>
-                      {tx.type === 'PAYOUT' ? <Wallet size={16} /> : <ArrowRight size={16} className="-rotate-45" />}
-                    </div>
-                    <span className="text-[10px] font-bold text-neutral-400">{tx.date}</span>
-                 </div>
-                 <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-1">{tx.source}</p>
-                 <h4 className={cn(
-                   "text-xl font-black font-headline",
-                   tx.type === 'PAYOUT' ? "text-success" : "text-neutral-900"
-                 )}>
-                   {tx.type === 'PAYOUT' ? '+' : '-'} ZMW {tx.amount.toLocaleString()}
-                 </h4>
-              </div>
-            ))}
-          </div>
-        </section>
 
         <section className="lg:col-span-6 space-y-4">
           <div className="flex justify-between items-center">
@@ -140,6 +119,9 @@ export const FarmerDashboard = () => {
         </section>
 
         <section className="lg:col-span-6 space-y-4">
+          {/* 4. MOCK DATA:
+              In a real app, this data would come from a database. 
+              For now, we use MOCK_DELIVERIES[0] to grab the first item from our fake list. */}
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold font-headline flex items-center gap-2 text-neutral-900">
               <Package size={20} className="text-primary" />
@@ -159,7 +141,7 @@ export const FarmerDashboard = () => {
               <p className="text-xs text-neutral-500 font-medium">{MOCK_DELIVERIES[0].produceType} • {MOCK_DELIVERIES[0].weight}</p>
               <div className="flex items-center gap-1 mt-1 text-primary">
                 <CheckCircle2 size={12} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Delivered: {MOCK_DELIVERIES[0].date}</span>
+                <span className="text-xs font-bold uppercase tracking-widest">Delivered: {MOCK_DELIVERIES[0].date}</span>
               </div>
             </div>
             <div className="text-neutral-400 group-hover:text-primary transition-colors pr-2">
