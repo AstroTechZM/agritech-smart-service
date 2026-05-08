@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createHashRouter, Navigate } from 'react-router-dom';
 import AppShell from '@/src/components/layout/AppShell';
 import Login from '@/src/pages/auth/Login';
 import Dashboard from '@/src/pages/dashboard/Dashboard';
@@ -24,7 +24,7 @@ interface RouterProps {
 }
 
 export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange }: RouterProps) => {
-  return createBrowserRouter([
+  return createHashRouter([
     {
       path: '/login',
       element: user ? <Navigate to="/dashboard" replace /> : <Login onLogin={onLogin} />,
