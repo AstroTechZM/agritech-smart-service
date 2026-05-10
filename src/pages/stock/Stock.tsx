@@ -6,11 +6,13 @@
  *    so we don't have to build everything from scratch.
  */
 import React, { useState } from 'react';
-import { Package, Download, Plus, MoreVertical, X } from 'lucide-react'; // Icons for the UI
+import { Package, Download, Plus, MoreVertical, X, Trash2, Loader2 } from 'lucide-react'; // Icons for the UI
 import { motion, AnimatePresence } from 'motion/react';
 
 import { cn } from '@/src/lib/utils'; // A utility to combine CSS class names easily
 import { UserRole } from '@/src/types'; // Information about the type of user (Admin, Dealer, etc.)
+import { api } from '@/src/services/api';
+import { useApi } from '@/src/hooks/useApi';
 
 /**
  * 2. INTERFACE (TypeScript):
@@ -33,22 +35,42 @@ export const Stock = ({ role }: StockProps) => {
   const isDealer = role === UserRole.AGRO_DEALER;
   const isClerk = role === UserRole.AGENT;
 
-  // 5. DATA: Usually this comes from a database, but here we hardcoded it for the demo.
-  // This is an array of objects representing items in the warehouse.
-  const [stockItems, setStockItems] = useState([
-    { name: 'D-Compound Fertilizer', qty: 450, unit: 'Bags', status: 'STABLE' },
-    { name: 'Urea Fertilizer', qty: 120, unit: 'Bags', status: 'LOW' },
-    { name: 'Maize Seed (10kg)', qty: 85, unit: 'Packs', status: 'STABLE' },
-    { name: 'Soybean Seed (25kg)', qty: 12, unit: 'Packs', status: 'LOW' },
-  ]);
+  const { data: stockItems, isLoading, setData: setStockItems } = useApi(api.fetchStock);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
   const [newItemUnit, setNewItemUnit] = useState('Bags');
 
+  // Calculate dynamic capacity percentages based on keywords in item names
+  const fertilizerQty = (stockItems || []).filter(i => i.name.toLowerCase().includes('fertilizer')).reduce((sum, item) => sum + item.qty, 0);
+  const seedQty = (stockItems || []).filter(i => i.name.toLowerCase().includes('seed')).reduce((sum, item) => sum + item.qty, 0);
+  
+  // Assume max capacities for the demo (1000 for fertilizer, 500 for seeds)
+  const fertilizerCapacity = Math.min(Math.round((fertilizerQty / 1000) * 100), 100);
+  const seedAvailability = Math.min(Math.round((seedQty / 500) * 100), 100);
+
+  const handleExport = () => {
+    if (!stockItems) return;
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + "Item Name,Quantity,Unit,Status\n"
+      + stockItems.map(i => `${i.name},${i.qty},${i.unit},${i.status}`).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "stock_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDelete = (name: string) => {
+    if (!stockItems) return;
+    setStockItems(stockItems.filter(item => item.name !== name));
+  };
+
   const handleAddStock = () => {
-    if (!newItemName || !newItemQty) return;
+    if (!newItemName || !newItemQty || !stockItems) return;
     const qty = parseInt(newItemQty);
     const newItem = {
       name: newItemName,
@@ -61,6 +83,15 @@ export const Stock = ({ role }: StockProps) => {
     setNewItemName('');
     setNewItemQty('');
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest">Loading Warehouse Data...</p>
+      </div>
+    );
+  }
 
   /**
    * 6. THE RETURN STATEMENT (JSX):
@@ -81,7 +112,10 @@ export const Stock = ({ role }: StockProps) => {
         </div>
         
         <div className="flex gap-3">
-          <button className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2">
+          <button 
+            onClick={handleExport}
+            className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-black/5 transition-colors"
+          >
             <Download size={16} /> Export
           </button>
           
@@ -140,8 +174,12 @@ export const Stock = ({ role }: StockProps) => {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <button className="p-2 text-neutral-400 hover:text-primary transition-colors">
-                          <MoreVertical size={18} />
+                        <button 
+                          onClick={() => handleDelete(item.name)}
+                          className="p-2 text-error/70 hover:text-error hover:bg-error/10 rounded-full transition-colors"
+                          title="Delete Item"
+                        >
+                          <Trash2 size={18} />
                         </button>
                       </td>
                     </tr>
@@ -161,10 +199,10 @@ export const Stock = ({ role }: StockProps) => {
               <div>
                 <div className="flex justify-between text-xs font-bold mb-2">
                   <span>Fertilizer Capacity</span>
-                  <span>82%</span>
+                  <span>{fertilizerCapacity}%</span>
                 </div>
                 <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-white w-[82%] rounded-full" />
+                  <div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${fertilizerCapacity}%` }} />
                 </div>
               </div>
               
@@ -172,15 +210,18 @@ export const Stock = ({ role }: StockProps) => {
               <div>
                 <div className="flex justify-between text-xs font-bold mb-2">
                   <span>Seed Availability</span>
-                  <span>45%</span>
+                  <span>{seedAvailability}%</span>
                 </div>
                 <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-tertiary-fixed-dim w-[45%] rounded-full" />
+                  <div className="h-full bg-tertiary-fixed-dim rounded-full transition-all duration-1000" style={{ width: `${seedAvailability}%` }} />
                 </div>
               </div>
             </div>
             
-            <button className="w-full mt-8 bg-white text-primary py-3 rounded-2xl font-bold text-sm hover:bg-opacity-90 transition-all">
+            <button 
+              onClick={() => alert("Restock request has been sent successfully!")}
+              className="w-full mt-8 bg-white text-primary py-3 rounded-2xl font-bold text-sm hover:bg-opacity-90 transition-all shadow-lg shadow-white/20"
+            >
               Request Restock
             </button>
           </div>

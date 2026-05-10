@@ -3,8 +3,10 @@ import { RouterProvider } from 'react-router-dom';
 import { User, UserRole } from '@/src/types';
 import { MOCK_USERS } from '@/src/data/mockData';
 import { createAppRouter } from '@/src/routes';
+import { Toaster } from 'sonner';
 
 import { WalletProvider } from '@/src/context/WalletContext';
+import { FarmerProvider } from '@/src/context/FarmerContext';
 
 export const App = () => {
   // Authentication State
@@ -24,8 +26,6 @@ export const App = () => {
 
   // Auth Handlers
   const handleLogin = (role: UserRole) => {
-    // In a real app, this would be an API call with credentials
-    // For this demo, we just use the role to pick a mock user
     const mockUser = MOCK_USERS[role];
     setUser(mockUser);
   };
@@ -42,15 +42,18 @@ export const App = () => {
   // Create router instance with necessary props
   const router = createAppRouter({
     user,
-    onLogin: (u) => setUser(u), // Modified LoginScreen to return the role or user
+    onLogin: (u) => setUser(u),
     onLogout: handleLogout,
     onRoleChange: handleRoleChange,
   });
 
   return (
-    <WalletProvider>
-      <RouterProvider router={router} />
-    </WalletProvider>
+    <FarmerProvider>
+      <WalletProvider>
+        <Toaster position="top-center" richColors />
+        <RouterProvider router={router} />
+      </WalletProvider>
+    </FarmerProvider>
   );
 };
 

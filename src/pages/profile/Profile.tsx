@@ -8,6 +8,29 @@ interface ProfileProps {
 }
 
 export const Profile = ({ user, onLogout }: ProfileProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: user.name,
+    email: user.email || '',
+    phone: user.cell_num ? `0${user.cell_num}` : '',
+    nrc: user.nrc || ''
+  });
+
+  const handleSave = () => {
+    setIsEditing(false);
+    alert('Profile changes have been saved successfully.');
+  };
+
+  const handleCancel = () => {
+    setProfileData({
+      name: user.name,
+      email: user.email || '',
+      phone: user.cell_num ? `0${user.cell_num}` : '',
+      nrc: user.nrc || ''
+    });
+    setIsEditing(false);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-end">
@@ -15,9 +38,29 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Account</span>
           <h2 className="text-3xl font-black font-headline tracking-tight">My Profile</h2>
         </div>
-        <button className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all font-headline">
-          <Edit3 size={16} /> Edit Profile
-        </button>
+        {!isEditing ? (
+          <button 
+            onClick={() => setIsEditing(true)}
+            className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all font-headline"
+          >
+            <Edit3 size={16} /> Edit Profile
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button 
+              onClick={handleCancel}
+              className="bg-surface-container-low text-neutral-600 px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-neutral-200 transition-all font-headline"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleSave}
+              className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all font-headline"
+            >
+              Save Changes
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -33,7 +76,7 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
               <Shield size={14} />
             </div>
           </div>
-          <h3 className="text-2xl font-black font-headline text-neutral-900">{user.name}</h3>
+          <h3 className="text-2xl font-black font-headline text-neutral-900">{profileData.name}</h3>
           <p className="text-xs font-bold text-primary uppercase tracking-widest mt-1">{user.role.replace('_', ' ')}</p>
           
           <div className="mt-8 w-full space-y-4">
@@ -42,14 +85,30 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
                 <Mail size={18} />
                 <span className="text-xs font-bold">Email</span>
               </div>
-              <span className="text-xs font-medium text-neutral-900">{user.email || 'Not provided'}</span>
+              {isEditing ? (
+                <input 
+                  className="bg-white border-none rounded-lg px-2 py-1 text-xs font-medium w-1/2"
+                  value={profileData.email}
+                  onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+                />
+              ) : (
+                <span className="text-xs font-medium text-neutral-900">{profileData.email || 'Not provided'}</span>
+              )}
             </div>
             <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
               <div className="flex items-center gap-3 text-neutral-500">
                 <Phone size={18} />
                 <span className="text-xs font-bold">Phone</span>
               </div>
-              <span className="text-xs font-medium text-neutral-900">{user.cell_num ? `0${user.cell_num}` : 'Not provided'}</span>
+              {isEditing ? (
+                <input 
+                  className="bg-white border-none rounded-lg px-2 py-1 text-xs font-medium w-1/2"
+                  value={profileData.phone}
+                  onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                />
+              ) : (
+                <span className="text-xs font-medium text-neutral-900">{profileData.phone || 'Not provided'}</span>
+              )}
             </div>
           </div>
         </div>
@@ -61,11 +120,27 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-neutral-400">Full Name</label>
-                <div className="p-4 bg-surface-container-low rounded-2xl text-sm font-medium">{user.name}</div>
+                {isEditing ? (
+                  <input 
+                    className="w-full p-4 bg-surface-container-low border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-primary/20"
+                    value={profileData.name}
+                    onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                  />
+                ) : (
+                  <div className="p-4 bg-surface-container-low rounded-2xl text-sm font-medium">{profileData.name}</div>
+                )}
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-neutral-400">NRC Number</label>
-                <div className="p-4 bg-surface-container-low rounded-2xl text-sm font-medium">{user.nrc || 'Pending Verification'}</div>
+                {isEditing ? (
+                  <input 
+                    className="w-full p-4 bg-surface-container-low border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-primary/20"
+                    value={profileData.nrc}
+                    onChange={(e) => setProfileData({...profileData, nrc: e.target.value})}
+                  />
+                ) : (
+                  <div className="p-4 bg-surface-container-low rounded-2xl text-sm font-medium">{profileData.nrc || 'Pending Verification'}</div>
+                )}
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[10px] font-bold uppercase text-neutral-400">Physical Address</label>
@@ -82,10 +157,16 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
             <p className="text-xs text-neutral-600 font-medium mb-6">Manage your password and security settings to keep your account safe.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mt-6">
               <div className="flex gap-4">
-                <button className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-primary shadow-sm hover:shadow-md transition-all">
+                <button 
+                  onClick={() => alert('Password reset link has been sent to your registered email.')}
+                  className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-primary shadow-sm hover:shadow-md transition-all"
+                >
                   Change Password
                 </button>
-                <button className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-neutral-700 shadow-sm hover:shadow-md transition-all">
+                <button 
+                  onClick={() => alert('Redirecting to security provider for Two-Factor setup...')}
+                  className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-neutral-700 shadow-sm hover:shadow-md transition-all"
+                >
                   Two-Factor Auth
                 </button>
               </div>

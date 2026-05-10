@@ -1,38 +1,41 @@
-/**
- * REACT BEGINNER'S GUIDE:
- * 
- * 1. PROPS (Properties):
- *    - 'role' is a Prop. It's like a setting passed from the parent (AppShell) to this page.
- *    - We use it here to decide what content to show (Farmer view vs. Admin view).
- */
-import React, { useState } from 'react';
-import { Ticket, CheckCircle2, QrCode, Map as MapIcon, X, Navigation } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Ticket, CheckCircle2, QrCode, Map as MapIcon, X, Navigation, Locate } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { UserRole } from '@/src/types';
+import { toast } from 'sonner';
 
 interface VouchersProps {
   role: UserRole;
 }
 
-/**
- * 2. COMPONENT: Vouchers
- *    The page where users manage their FISP input vouchers or admins view analytics.
- */
 export const Vouchers = ({ role }: VouchersProps) => {
-  // Logic to check the current user's role
   const isFarmer = role === UserRole.FARMER;
   const isAdmin = role === UserRole.ADMIN;
 
   const [showQRModal, setShowQRModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ x: number; y: number } | null>(null);
+
+  // Simulated dealers data for the map
+  const dealers = [
+    { id: 1, name: "AgriTech Hub - Central", dist: "2.4 km", x: 60, y: 40, stock: "D-Compound" },
+    { id: 2, name: "Farmers Co-op", dist: "5.1 km", x: 30, y: 70, stock: "D-Compound" },
+    { id: 3, name: "Zambia Seeds Ltd", dist: "8.7 km", x: 80, y: 20, stock: "Maize Seeds" },
+  ];
+
+  const handleLocateUser = () => {
+    toast.info("Accessing GPS...");
+    setTimeout(() => {
+      setUserLocation({ x: 50, y: 50 });
+      toast.success("Location captured!");
+    }, 1500);
+  };
 
   return (
-    // 'animate-in' provides a smooth fade-in effect when the page loads.
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-end">
         <div>
-          {/* We use a ternary operator (?) to show different text based on the role */}
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-1 block">
             {isAdmin ? 'System Oversight' : 'Voucher Management'}
           </span>
@@ -40,13 +43,10 @@ export const Vouchers = ({ role }: VouchersProps) => {
             {isAdmin ? 'Voucher Analytics' : 'FISP Eligibility & Vouchers'}
           </h2>
         </div>
-
       </div>
 
       {isFarmer && (
         <div className="bg-surface-container-lowest p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
-
-
           <div className="bg-surface-container-low p-6 rounded-3xl border border-primary/10 relative overflow-hidden">
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-6">
@@ -97,9 +97,6 @@ export const Vouchers = ({ role }: VouchersProps) => {
       )}
 
       <div className="space-y-4">
-        {/* 4. MAPPING LISTS: 
-            We take a list of data and "Map" it into rows of a table. 
-            This is how we show multiple items without writing the HTML for each one manually. */}
         <h3 className="text-lg font-bold font-headline px-1">Voucher History</h3>
         <div className="bg-surface-container-lowest rounded-[2.5rem] border border-black/5 shadow-sm overflow-hidden">
           <table className="w-full text-left">
@@ -122,11 +119,6 @@ export const Vouchers = ({ role }: VouchersProps) => {
                   <td className="px-8 py-5 text-xs text-neutral-500 font-medium">{v.type}</td>
                   <td className="px-8 py-5 text-xs text-neutral-500 font-medium">{v.date}</td>
                   <td className="px-8 py-5">
-                    {/**
-                     * 5. DYNAMIC STYLING (cn):
-                     *    The 'cn' helper allows us to change colors based on the status.
-                     *    Notice how ACTIVE is primary, REDEEMED is tertiary, etc.
-                     */}
                     <span className={cn(
                       "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
                       v.status === 'ACTIVE' ? "bg-primary/10 text-primary" :
@@ -172,10 +164,8 @@ export const Vouchers = ({ role }: VouchersProps) => {
               </div>
 
               <div className="bg-surface-container-low p-6 rounded-3xl border border-black/5 inline-block mx-auto mb-6">
-                {/* Mock QR Code representation */}
                 <div className="w-48 h-48 bg-white border border-black/10 rounded-2xl flex items-center justify-center relative overflow-hidden">
                   <QrCode size={160} strokeWidth={1} className="text-neutral-800" />
-                  {/* Scanning line animation */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-primary/50 shadow-[0_0_10px_2px_rgba(var(--color-primary),0.5)] animate-[bounce_3s_ease-in-out_infinite]" />
                 </div>
               </div>
@@ -219,41 +209,89 @@ export const Vouchers = ({ role }: VouchersProps) => {
                 </button>
               </div>
 
-              {/* Fake Map Container */}
-              <div className="aspect-video bg-neutral-100 rounded-3xl border border-black/10 relative overflow-hidden mb-6 flex items-center justify-center">
-                <img 
-                  src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=800&h=400&fit=crop" 
-                  alt="Map View" 
-                  className="w-full h-full object-cover opacity-60" 
-                />
-                {/* Fake map pins */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary drop-shadow-xl animate-bounce">
-                  <MapIcon size={32} className="fill-white" />
-                </div>
-                <div className="absolute top-1/3 left-1/4 text-neutral-400 drop-shadow-xl">
-                  <MapIcon size={24} className="fill-white" />
+              {/* INTERACTIVE MAP SIMULATION */}
+              <div className="aspect-video bg-neutral-100 rounded-3xl border border-black/10 relative overflow-hidden mb-6 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+                <svg className="w-full h-full opacity-20 absolute inset-0">
+                  <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="1" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid)" />
+                </svg>
+
+                {/* Simulated Roads/Paths */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-10">
+                  <path d="M0,50 Q200,100 400,50 T800,50" fill="none" stroke="black" strokeWidth="20" strokeLinecap="round" />
+                  <path d="M100,0 Q150,200 100,400" fill="none" stroke="black" strokeWidth="15" strokeLinecap="round" />
+                </svg>
+
+                {/* Dealer Pins */}
+                {dealers.map((dealer) => (
+                  <motion.div
+                    key={dealer.id}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute cursor-pointer group"
+                    style={{ left: `${dealer.x}%`, top: `${dealer.y}%` }}
+                    onClick={() => toast.info(`Selected: ${dealer.name}`)}
+                  >
+                    <div className="relative -translate-x-1/2 -translate-y-full">
+                       <MapIcon size={32} className="text-primary fill-white drop-shadow-lg" />
+                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black text-white text-[8px] font-bold px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                         {dealer.name}
+                       </div>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {/* User Pin */}
+                {userLocation && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute"
+                    style={{ left: `${userLocation.x}%`, top: `${userLocation.y}%` }}
+                  >
+                    <div className="relative -translate-x-1/2 -translate-y-1/2">
+                      <div className="w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg animate-pulse" />
+                      <div className="w-12 h-12 bg-blue-500/20 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-ping" />
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Map Controls */}
+                <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+                  <button 
+                    onClick={handleLocateUser}
+                    className="w-10 h-10 bg-white border border-black/10 rounded-xl flex items-center justify-center text-neutral-600 hover:bg-neutral-50 shadow-sm"
+                  >
+                    <Locate size={18} />
+                  </button>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <div className="p-4 bg-surface-container-low rounded-2xl flex justify-between items-center border border-primary/20">
-                  <div>
-                    <p className="font-bold text-sm text-neutral-900">AgriTech Hub - Central</p>
-                    <p className="text-xs text-neutral-500">2.4 km away • In Stock: D-Compound</p>
+                {dealers.map((dealer) => (
+                  <div key={dealer.id} className={cn(
+                    "p-4 rounded-2xl flex justify-between items-center border transition-all",
+                    dealer.id === 1 ? "bg-primary/5 border-primary/20" : "bg-surface-container-low border-black/5"
+                  )}>
+                    <div>
+                      <p className="font-bold text-sm text-neutral-900">{dealer.name}</p>
+                      <p className="text-xs text-neutral-500">{dealer.dist} away • In Stock: {dealer.stock}</p>
+                    </div>
+                    <button 
+                      onClick={() => toast.success(`Navigation started to ${dealer.name}`)}
+                      className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-all",
+                        dealer.id === 1 ? "bg-primary text-white shadow-primary/20" : "bg-neutral-200 text-neutral-500"
+                      )}
+                    >
+                      <Navigation size={18} />
+                    </button>
                   </div>
-                  <button className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                    <Navigation size={18} />
-                  </button>
-                </div>
-                <div className="p-4 bg-surface-container-low rounded-2xl flex justify-between items-center border border-black/5">
-                  <div>
-                    <p className="font-bold text-sm text-neutral-900">Farmers Co-op</p>
-                    <p className="text-xs text-neutral-500">5.1 km away • In Stock: D-Compound</p>
-                  </div>
-                  <button className="w-10 h-10 bg-neutral-200 text-neutral-500 rounded-xl flex items-center justify-center">
-                    <Navigation size={18} />
-                  </button>
-                </div>
+                ))}
               </div>
             </motion.div>
           </motion.div>

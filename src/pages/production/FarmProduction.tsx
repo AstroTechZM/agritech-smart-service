@@ -32,6 +32,36 @@ export const FarmProduction = () => {
   //    - 'selectedProduction' tracks which crop record is clicked for details.
   const [selectedSeason, setSelectedSeason] = useState('2025-2026');
   const [selectedProduction, setSelectedProduction] = useState<any>(null);
+  const [productionItems, setProductionItems] = useState(MOCK_FARM_PRODUCTION);
+
+  const handleLogActivity = (type: 'Harvest' | 'Activity') => {
+    const newRecord = {
+      id: `LOG-${Math.floor(Math.random() * 9000) + 1000}`,
+      crop: 'Maize (White)',
+      season: selectedSeason,
+      area: 0.5,
+      harvestDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      yield: type === 'Harvest' ? 1200 : 0,
+      status: type === 'Harvest' ? 'SOLD' : 'GROWING',
+      grade: 'A',
+      moisture: '12.5%'
+    };
+    setProductionItems([newRecord, ...productionItems]);
+    alert(`${type} record has been added to your farm history.`);
+  };
+
+  const handleExportReport = () => {
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + "ID,Crop,Season,Area (Ha),Harvest Date,Yield (KG),Status\n"
+      + productionItems.map(p => `${p.id},${p.crop},${p.season},${p.area},${p.harvestDate},${p.yield},${p.status}`).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `farm_production_report_${selectedSeason}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Data for the summary boxes at the top
   const stats = [
@@ -49,7 +79,10 @@ export const FarmProduction = () => {
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Private Farm Records</span>
           <h2 className="text-3xl font-black font-headline tracking-tight">Farm Production</h2>
         </div>
-        <button className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+        <button 
+          onClick={() => handleLogActivity('Harvest')}
+          className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+        >
           <Plus size={16} /> Log New Harvest
         </button>
       </div>
@@ -169,8 +202,8 @@ export const FarmProduction = () => {
                * 4. FILTERED LIST: 
                *    We only show records that match the 'selectedSeason'.
                */}
-              {MOCK_FARM_PRODUCTION.filter(p => p.season === selectedSeason).length > 0 ? (
-                MOCK_FARM_PRODUCTION.filter(p => p.season === selectedSeason).map((record) => (
+              {productionItems.filter(p => p.season === selectedSeason).length > 0 ? (
+                productionItems.filter(p => p.season === selectedSeason).map((record) => (
                   <div
                     key={record.id}
                     onClick={() => setSelectedProduction(record)}
@@ -311,7 +344,13 @@ export const FarmProduction = () => {
                       </div>
                     </div>
 
-                    <button className="w-full bg-primary text-white py-5 rounded-2xl font-black font-headline text-lg shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3">
+                    <button 
+                      onClick={() => {
+                        handleLogActivity('Activity');
+                        setSelectedProduction(null);
+                      }}
+                      className="w-full bg-primary text-white py-5 rounded-2xl font-black font-headline text-lg shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3"
+                    >
                       Log Farm Activity <ChevronRight size={24} />
                     </button>
                   </div>
@@ -363,10 +402,16 @@ export const FarmProduction = () => {
                     </div>
 
                     <div className="flex gap-4">
-                      <button className="flex-1 bg-surface-container-low hover:bg-black/5 py-4 rounded-2xl font-bold text-xs transition-colors flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => alert('Detailed logistical logs are only available for confirmed grain deliveries.')}
+                        className="flex-1 bg-surface-container-low hover:bg-black/5 py-4 rounded-2xl font-bold text-xs transition-colors flex items-center justify-center gap-2"
+                      >
                         Logistical Data <ChevronRight size={16} />
                       </button>
-                      <button className="flex-1 bg-primary text-white py-4 rounded-2xl font-bold text-xs shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                      <button 
+                        onClick={handleExportReport}
+                        className="flex-1 bg-primary text-white py-4 rounded-2xl font-bold text-xs shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                      >
                         Export Performance Report <Info size={16} />
                       </button>
                     </div>
