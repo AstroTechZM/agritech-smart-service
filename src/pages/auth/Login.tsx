@@ -1,19 +1,68 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Landmark, Smartphone } from 'lucide-react';
+import { Landmark, ShieldAlert, Loader2 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { UserRole, User } from '@/src/types';
 import { MOCK_USERS } from '@/src/data/mockData';
+import { useFarmers } from '@/src/context/FarmerContext';
+import { toast } from 'sonner';
 
 interface LoginProps {
   onLogin: (user: User) => void;
 }
 
 export const Login = ({ onLogin }: LoginProps) => {
+  const navigate = useNavigate();
+  const { findFarmerByNRC } = useFarmers();
   const [role, setRole] = useState<UserRole>(UserRole.FARMER);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!identifier) {
+      toast.error("Please enter your NRC or Email.");
+      return;
+    }
+
+    setIsLoading(true);
+    // Simulate authentication delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // 1. Check Mock Admin/Agent Users
+    const mockUser = MOCK_USERS[role];
+    const isValidMock = (role !== UserRole.FARMER && identifier === mockUser.email) || 
+                       (role === UserRole.FARMER && identifier === mockUser.nrc);
+
+    if (isValidMock) {
+      onLogin(mockUser);
+      toast.success(`Welcome back, ${mockUser.name || mockUser.first_name}!`);
+      setIsLoading(false);
+      return;
+    }
+
+    // 2. Check Persisted Farmers (FarmerContext)
+    if (role === UserRole.FARMER) {
+      const farmer = findFarmerByNRC(identifier);
+      if (farmer) {
+        onLogin({
+          id: `F-${farmer.nrc}`,
+          name: `${farmer.firstName} ${farmer.lastName}`,
+          role: UserRole.FARMER,
+          nrc: farmer.nrc,
+          district: farmer.district,
+          email: `${farmer.firstName.toLowerCase()}@example.zm`
+        });
+        toast.success(`Welcome back, ${farmer.firstName}!`);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    toast.error("Invalid credentials. Please try again.");
+    setIsLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-4">
@@ -27,7 +76,7 @@ export const Login = ({ onLogin }: LoginProps) => {
             <Landmark size={32} />
           </div>
           <h1 className="text-2xl font-black font-headline text-primary tracking-tight">Agri Tech Portal</h1>
-          <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mt-1">Government of Zambia</p>
+          <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mt-1 text-center">Secure Digital Services • Zambia</p>
         </div>
 
         <div className="space-y-6">
@@ -35,7 +84,10 @@ export const Login = ({ onLogin }: LoginProps) => {
             {(Object.values(UserRole)).map((r) => (
               <button
                 key={r}
-                onClick={() => setRole(r)}
+                onClick={() => {
+                    setRole(r);
+                    setIdentifier('');
+                }}
                 className={cn(
                   "py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
                   role === r ? "bg-primary text-white shadow-md" : "text-neutral-500 hover:bg-black/5"
@@ -48,57 +100,62 @@ export const Login = ({ onLogin }: LoginProps) => {
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">NRC or Email</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">
+                {role === UserRole.FARMER ? 'NRC Number' : 'Work Email'}
+              </label>
               <input
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder={role === UserRole.FARMER || role === UserRole.AGENT ? "000000/00/1" : "email@example.zm"}
-                className="w-full bg-surface-container-low border-none rounded-2xl py-3.5 px-5 text-sm focus:ring-2 focus:ring-primary/20"
+                placeholder={role === UserRole.FARMER ? "000000/00/1" : "officer@mafs.gov.zm"}
+                className="w-full bg-surface-container-low border-none rounded-2xl py-3.5 px-5 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
               />
+              {role === UserRole.FARMER && (
+                <p className="text-[9px] text-neutral-400 font-medium ml-1">Use your registered NRC to log in.</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Password</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Secure PIN / Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-surface-container-low border-none rounded-2xl py-3.5 px-5 text-sm focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">OTP Code</label>
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="000000"
-                className="w-full bg-surface-container-low border-none rounded-2xl py-3.5 px-5 text-sm tracking-[0.5em] text-center focus:ring-2 focus:ring-primary/20"
+                className="w-full bg-surface-container-low border-none rounded-2xl py-3.5 px-5 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
               />
             </div>
           </div>
 
           <button
-            onClick={() => onLogin(MOCK_USERS[role])}
-            className="w-full primary-gradient text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            onClick={handleLogin}
+            disabled={isLoading}
+            className="w-full primary-gradient text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
-            Login to Portal
+            {isLoading ? <Loader2 className="animate-spin" size={24} /> : 'Login to Portal'}
           </button>
 
-          <div className="relative py-4">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-black/5"></div></div>
-            <div className="relative flex justify-center text-[10px] uppercase font-bold text-neutral-400 bg-surface-container-lowest px-2">New to Agri-Tech?</div>
+          <div className="bg-primary/5 p-4 rounded-2xl flex gap-3 items-start border border-primary/10">
+            <ShieldAlert size={18} className="text-primary shrink-0 mt-0.5" />
+            <p className="text-[10px] text-primary/80 font-medium leading-relaxed">
+                <span className="font-bold">Security Note:</span> This is a secure government portal. Unauthorized access is strictly prohibited and monitored.
+            </p>
           </div>
 
-          <button className="w-full bg-tertiary text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-tertiary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-black/5"></div></div>
+            <div className="relative flex justify-center text-[10px] uppercase font-bold text-neutral-400 bg-surface-container-lowest px-2">New Farmer?</div>
+          </div>
+
+          <button 
+            onClick={() => navigate('/registration')}
+            className="w-full bg-tertiary text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-tertiary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
             Register My Farm
           </button>
         </div>
       </motion.div>
-      <p className="mt-8 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.3em]">Secure Access • 2026 Season</p>
+      <p className="mt-8 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.3em]">Official Government System • 2026</p>
     </div>
   );
 };

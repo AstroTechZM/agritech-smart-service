@@ -1,26 +1,18 @@
-/**
- * REACT BEGINNER'S GUIDE:
- * 
- * 1. MULTI-STEP FORMS:
- *    - In React, we often use a "step" variable to decide which part of a form to show.
- *    - This is like a "choose your own adventure" book where the page changes based on your choices.
- */
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowRight, MapPin, Search, CheckCircle2, ShieldCheck, Camera, Pencil, X } from 'lucide-react'; // Icons
-import { cn } from '@/src/lib/utils'; // Styling helper
+import { ArrowRight, MapPin, Search, CheckCircle2, ShieldCheck, Camera, Pencil, X, Loader2, Printer, QrCode } from 'lucide-react';
+import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { api } from '@/src/services/api';
+import { useApi } from '@/src/hooks/useApi';
+import { toast } from 'sonner';
+import { UI_CONSTANTS, APP_CONFIG } from '@/src/constants';
+import { useFarmers } from '@/src/context/FarmerContext';
 
-/**
- * 2. COMPONENT: Registration
- *    This handles the process of registering a new farmer.
- */
 export const Registration = () => {
-  // 3. STEP STATE: Tracks which screen the user is currently on (1, 2, 3, 4, or 5).
   const [step, setStep] = useState(1);
+  const [isCapturingGPS, setIsCapturingGPS] = useState(false);
+  const { addFarmer } = useFarmers();
 
-  // 4. COMPLEX STATE (Object):
-  //    Instead of one sticky note, this is like a "Form Sheet" that holds multiple 
-  //    pieces of information (name, NRC, etc.) in one place.
   const [formData, setFormData] = useState({
     nrc: '',
     firstName: '',
@@ -30,8 +22,88 @@ export const Registration = () => {
     district: '',
     camp: '',
     farmSize: '',
+    gps: '',
     crops: [] as string[],
   });
+
+  const { isLoading: isRegistering, execute: registerFarmer } = useApi(api.registerFarmer, { immediate: false });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCaptureGPS = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setIsCapturingGPS(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+        setFormData(prev => ({ ...prev, gps: coords }));
+        toast.success("GPS Coordinates captured successfully!");
+        setIsCapturingGPS(false);
+      },
+      (error) => {
+        console.error(error);
+        toast.error("Failed to capture location. Please enter manually.");
+        setIsCapturingGPS(false);
+      }
+    );
+  };
+
+  const validateNRC = (nrc: string) => {
+    const nrcRegex = /^\d{6}\/\d{2}\/\d{1}$/;
+    return nrcRegex.test(nrc);
+  };
+
+  const validateStep = (currentStep: number) => {
+    if (currentStep === 1) {
+      if (!formData.nrc || !formData.firstName || !formData.lastName || !formData.gender) {
+        toast.error("Please fill in all personal details.");
+        return false;
+      }
+      if (!validateNRC(formData.nrc)) {
+        toast.error("Invalid NRC format. Expected: 000000/00/1");
+        return false;
+      }
+    } else if (currentStep === 2) {
+      if (!formData.district || !formData.camp || !formData.farmSize) {
+        toast.error("Please fill in all farm details.");
+        return false;
+      }
+    } else if (currentStep === 4) {
+      if (!photoCaptured || !signatureCaptured) {
+        toast.error("Photo and Signature are required for verification.");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (validateStep(step)) {
+      setStep(prev => prev + 1);
+    }
+  };
+
+  const handleCompleteRegistration = async () => {
+    if (!validateStep(4)) return;
+    
+    try {
+      await registerFarmer(formData);
+      // Add to global state
+      addFarmer(formData);
+      toast.success("Farmer registration completed successfully!");
+      setStep(5);
+    } catch (error) {
+      toast.error("Registration failed. Please try again.");
+      console.error("Registration failed", error);
+    }
+  };
 
   // Device simulation states
   const [photoCaptured, setPhotoCaptured] = useState(false);
@@ -50,26 +122,22 @@ export const Registration = () => {
     setShowCamera(true);
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert("Camera API requires a secure HTTPS connection. Falling back to simulation mode.");
+      toast.warning("Camera API requires HTTPS. Using simulation mode.");
       setUseSimulation(true);
       return;
     }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      
-      // Wait for React to render the modal and video element
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         } else {
-          // If modal was closed immediately or ref failed
           stream.getTracks().forEach(t => t.stop());
         }
       }, 100);
     } catch (err) {
-      console.error("Error accessing camera:", err);
-      alert("Error accessing camera. Falling back to simulation mode.");
+      toast.error("Could not access camera. Using simulation mode.");
       setUseSimulation(true);
     }
   };
@@ -86,7 +154,7 @@ export const Registration = () => {
 
   const capturePhoto = () => {
     if (useSimulation) {
-      setCapturedImageSrc("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop");
+      setCapturedImageSrc(UI_CONSTANTS.DEFAULT_AVATAR);
       setPhotoCaptured(true);
       stopCamera();
       return;
@@ -108,14 +176,12 @@ export const Registration = () => {
     }
   };
 
-  // Cleanup camera on unmount
   useEffect(() => {
     return () => {
       stopCamera();
     };
   }, []);
 
-  // Canvas ref and drawing state
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -158,14 +224,9 @@ export const Registration = () => {
     ctx.moveTo(x, y);
   };
 
-  /**
-   * 5. HELPER FUNCTION (renderStep):
-   *    This function uses a "switch" statement (like a multi-way fork in the road) 
-   *    to return the correct JSX (UI) based on the current 'step'.
-   */
   const renderStep = () => {
     switch (step) {
-      case 1: // STEP 1: Personal Details
+      case 1:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <h3 className="text-xl font-bold font-headline">Personal Details</h3>
@@ -174,74 +235,123 @@ export const Registration = () => {
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">NRC Number</label>
                 <input
                   type="text"
-                  placeholder="000000/00/1"
+                  name="nrc"
+                  value={formData.nrc}
+                  onChange={handleInputChange}
+                  placeholder={UI_CONSTANTS.PLACEHOLDER_NRC}
                   className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Gender</label>
-                <select className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none appearance-none">
-                  <option>Select Gender</option>
-                  <option>Male</option>
-                  <option>Female</option>
+                <select 
+                  name="gender" 
+                  value={formData.gender} 
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">First Name</label>
-                <input type="text" className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" />
+                <input 
+                  type="text" 
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" 
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Last Name</label>
-                <input type="text" className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" />
+                <input 
+                  type="text" 
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" 
+                />
               </div>
             </div>
-            {/* Navigating to Step 2 */}
-            <button onClick={() => setStep(2)} className="w-full primary-gradient text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2">
+            <button onClick={handleNext} className="w-full primary-gradient text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2">
               Next: Farm Details <ArrowRight size={20} />
             </button>
           </div>
         );
       
-      case 2: // STEP 2: Farm & Location
+      case 2:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <h3 className="text-xl font-bold font-headline">Farm & Location</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">District</label>
-                <select className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none appearance-none">
-                  <option>Select District</option>
-                  <option>Choma</option>
-                  <option>Kasama</option>
-                  <option>Chipata</option>
+                <select 
+                  name="district"
+                  value={formData.district}
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
+                >
+                  <option value="">Select District</option>
+                  <option value="Choma">Choma</option>
+                  <option value="Kasama">Kasama</option>
+                  <option value="Chipata">Chipata</option>
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Agricultural Camp</label>
-                <input type="text" className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" />
+                <input 
+                  type="text" 
+                  name="camp"
+                  value={formData.camp}
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" 
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Farm Size (Hectares)</label>
-                <input type="number" className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" />
+                <input 
+                  type="number" 
+                  name="farmSize"
+                  value={formData.farmSize}
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" 
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">GPS Coordinates</label>
                 <div className="flex gap-2">
-                  <input type="text" placeholder="Lat, Long" className="flex-1 bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" />
-                  <button className="p-4 bg-primary/10 text-primary rounded-2xl"><MapPin size={24} /></button>
+                  <input 
+                    name="gps"
+                    value={formData.gps}
+                    onChange={handleInputChange}
+                    type="text" 
+                    placeholder="Lat, Long" 
+                    className="flex-1 bg-surface-container-low border border-black/5 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-primary/20 outline-none" 
+                  />
+                  <button 
+                    onClick={handleCaptureGPS}
+                    disabled={isCapturingGPS}
+                    className="p-4 bg-primary/10 text-primary rounded-2xl hover:bg-primary/20 transition-colors disabled:opacity-50"
+                  >
+                    {isCapturingGPS ? <Loader2 size={24} className="animate-spin" /> : <MapPin size={24} />}
+                  </button>
                 </div>
               </div>
             </div>
             <div className="flex gap-4">
               <button onClick={() => setStep(1)} className="flex-1 bg-surface-container-low py-5 rounded-2xl font-bold">Back</button>
-              <button onClick={() => setStep(3)} className="flex-[2] primary-gradient text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2">
+              <button onClick={handleNext} className="flex-[2] primary-gradient text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2">
                 Next: Eligibility <ArrowRight size={20} />
               </button>
             </div>
           </div>
         );
 
-      case 3: // STEP 3: Automated Eligibility Check
+      case 3:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <h3 className="text-xl font-bold font-headline">FISP Eligibility Check</h3>
@@ -258,7 +368,6 @@ export const Registration = () => {
                 </div>
               </div>
               <div className="space-y-4">
-                {/* Visual feedback of checks being performed */}
                 <div className="flex items-center gap-3">
                   <CheckCircle2 size={20} className="text-tertiary" />
                   <span className="text-sm">No duplicate NRC found</span>
@@ -279,14 +388,14 @@ export const Registration = () => {
             </div>
             <div className="flex gap-4">
               <button onClick={() => setStep(2)} className="flex-1 bg-surface-container-low py-5 rounded-2xl font-bold">Back</button>
-              <button onClick={() => setStep(4)} className="flex-[2] primary-gradient text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2">
+              <button onClick={handleNext} className="flex-[2] primary-gradient text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2">
                 Next: Verification <ArrowRight size={20} />
               </button>
             </div>
           </div>
         );
 
-      case 4: // STEP 4: Identity Verification
+      case 4:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <h3 className="text-xl font-bold font-headline">Identity Verification</h3>
@@ -338,14 +447,22 @@ export const Registration = () => {
             </div>
             <div className="flex gap-4">
               <button onClick={() => setStep(3)} className="flex-1 bg-surface-container-low py-5 rounded-2xl font-bold">Back</button>
-              <button onClick={() => setStep(5)} className="flex-[2] bg-black text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2">
-                Complete Registration <CheckCircle2 size={20} />
+              <button 
+                onClick={handleCompleteRegistration}
+                disabled={isRegistering}
+                className="flex-[2] bg-black text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isRegistering ? (
+                  <>Processing... <Loader2 className="animate-spin" size={20} /></>
+                ) : (
+                  <>Complete Registration <CheckCircle2 size={20} /></>
+                )}
               </button>
             </div>
           </div>
         );
 
-      case 5: // STEP 5: Success Message
+      case 5:
         return (
           <div className="text-center space-y-6 py-12 animate-in zoom-in-95 duration-500">
             <div className="w-24 h-24 bg-tertiary/10 rounded-full flex items-center justify-center mx-auto text-tertiary">
@@ -353,11 +470,90 @@ export const Registration = () => {
             </div>
             <div>
               <h3 className="text-3xl font-black font-headline">Registration Successful</h3>
-              <p className="text-sm text-neutral-500 max-w-xs mx-auto">Farmer Mumba Chileshe has been registered and assigned Voucher ID #FISP-2026-9921.</p>
+              <p className="text-sm text-neutral-500 max-w-xs mx-auto">
+                Farmer <span className="font-bold text-neutral-900">{formData.firstName || 'Farmer'} {formData.lastName}</span> has been registered and assigned Voucher ID #FISP-2026-{Math.floor(1000 + Math.random() * 9000)}.
+              </p>
             </div>
             <div className="flex flex-col gap-3 max-w-xs mx-auto">
-              <button className="w-full primary-gradient text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/20">Print Farmer ID Card</button>
-              <button onClick={() => setStep(1)} className="w-full bg-surface-container-low py-4 rounded-2xl font-bold">Register Another Farmer</button>
+              <button 
+                onClick={() => {
+                  toast.info("Preparing secure ID card...");
+                  setTimeout(() => window.print(), 800);
+                }}
+                className="w-full primary-gradient text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
+              >
+                <Printer size={20} /> Print Farmer ID Card
+              </button>
+              <button 
+                onClick={() => {
+                  setFormData({
+                    nrc: '',
+                    firstName: '',
+                    lastName: '',
+                    gender: '',
+                    dob: '',
+                    district: '',
+                    camp: '',
+                    farmSize: '',
+                    gps: '',
+                    crops: [],
+                  });
+                  setPhotoCaptured(false);
+                  setSignatureCaptured(false);
+                  setCapturedImageSrc(null);
+                  setCapturedSignatureSrc(null);
+                  setStep(1);
+                }} 
+                className="w-full bg-surface-container-low py-4 rounded-2xl font-bold"
+              >
+                Register Another Farmer
+              </button>
+            </div>
+
+            <div id="id-card-print" className="hidden print:block fixed top-0 left-0 w-full h-full bg-white z-[9999]">
+              <div className="w-[85.6mm] h-[53.98mm] border-2 border-primary rounded-[10px] p-4 relative overflow-hidden flex bg-white mx-auto mt-20">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 bg-primary rounded-full" />
+                    <div>
+                      <h1 className="text-[10px] font-black leading-none">{APP_CONFIG.ORGANIZATION}</h1>
+                      <p className="text-[6px] font-bold text-neutral-500 uppercase tracking-tighter">Farmer Digital ID</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[6px] text-neutral-400 font-bold uppercase">Name</p>
+                    <p className="text-[10px] font-black uppercase leading-tight">{formData.firstName} {formData.lastName}</p>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <p className="text-[6px] text-neutral-400 font-bold uppercase">NRC</p>
+                        <p className="text-[8px] font-bold">{formData.nrc}</p>
+                      </div>
+                      <div>
+                        <p className="text-[6px] text-neutral-400 font-bold uppercase">District</p>
+                        <p className="text-[8px] font-bold">{formData.district}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-4 left-4">
+                    <QrCode size={40} className="text-black opacity-80" />
+                  </div>
+                  <div className="absolute bottom-4 right-4 text-right">
+                    <p className="text-[6px] text-neutral-400 font-bold uppercase">Signature</p>
+                    {capturedSignatureSrc && <img src={capturedSignatureSrc} className="h-6 w-auto ml-auto invert" alt="sign" />}
+                  </div>
+                </div>
+                <div className="w-[25mm] h-[32mm] bg-neutral-100 rounded-lg overflow-hidden border border-black/10 ml-4 self-center">
+                  {capturedImageSrc && <img src={capturedImageSrc} className="w-full h-full object-cover" alt="farmer" />}
+                </div>
+                <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/5 rounded-full" />
+              </div>
+              <style>{`
+                @media print {
+                  body * { visibility: hidden; }
+                  #id-card-print, #id-card-print * { visibility: visible; }
+                  #id-card-print { position: absolute; left: 0; top: 0; }
+                }
+              `}</style>
             </div>
           </div>
         );
@@ -375,14 +571,12 @@ export const Registration = () => {
           <p className="text-sm text-neutral-500">Pathway B: Manual Officer-Led Enrollment</p>
         </div>
         
-        {/* STEP PROGRESS INDICATOR */}
         <div className="flex gap-2">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
               className={cn(
                 "w-8 h-1.5 rounded-full transition-all duration-500",
-                // If current step is greater than or equal to 'i', color it primary.
                 step >= i ? "bg-primary" : "bg-black/5"
               )}
             />
@@ -390,12 +584,10 @@ export const Registration = () => {
         </div>
       </div>
 
-      {/* DYNAMIC CONTENT AREA: Based on current step */}
       <div className="bg-surface-container-lowest p-8 rounded-[2.5rem] border border-black/5 shadow-sm max-w-3xl mx-auto">
         {renderStep()}
       </div>
 
-      {/* CAMERA MODAL SIMULATION */}
       <AnimatePresence>
         {showCamera && (
           <motion.div
@@ -416,10 +608,9 @@ export const Registration = () => {
                   <X size={20} />
                 </button>
               </div>
-              {/* Real Viewfinder with Simulation Fallback */}
               <div className="aspect-[3/4] bg-black rounded-[2rem] border-2 border-white/20 relative overflow-hidden flex items-center justify-center">
                 {useSimulation ? (
-                  <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop" alt="feed" className="w-full h-full object-cover opacity-60" />
+                  <img src={UI_CONSTANTS.DEFAULT_AVATAR} alt="feed" className="w-full h-full object-cover opacity-60" />
                 ) : (
                   <video 
                     ref={videoRef} 
@@ -450,7 +641,6 @@ export const Registration = () => {
         )}
       </AnimatePresence>
 
-      {/* SIGNATURE MODAL SIMULATION */}
       <AnimatePresence>
         {showSignature && (
           <motion.div

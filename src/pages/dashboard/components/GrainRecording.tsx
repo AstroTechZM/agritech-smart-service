@@ -1,11 +1,71 @@
-import React from 'react';
-import { ArrowRight, QrCode } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRight, QrCode, Search, Loader2 } from 'lucide-react';
+import { APP_CONFIG, UI_CONSTANTS, MOCK_DEFAULTS } from '@/src/constants';
+import { toast } from 'sonner';
+import { useFarmers } from '@/src/context/FarmerContext';
 
 interface GrainRecordingProps {
   onBack: () => void;
 }
 
 export const GrainRecording = ({ onBack }: GrainRecordingProps) => {
+  const { findFarmerByNRC } = useFarmers();
+  const [formData, setFormData] = useState({
+    nrc: '',
+    crop: MOCK_DEFAULTS.CROP_MAIZE,
+    weight: '',
+    moisture: '12.5',
+    grade: 'Grade 1',
+  });
+
+  const [foundFarmer, setFoundFarmer] = useState<{ name: string; nrc: string } | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLookup = async () => {
+    if (!formData.nrc) {
+      toast.error("Please enter an NRC number.");
+      return;
+    }
+
+    setIsLookingUp(true);
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const farmer = findFarmerByNRC(formData.nrc);
+    
+    if (farmer) {
+      setFoundFarmer({ name: `${farmer.firstName} ${farmer.lastName}`, nrc: farmer.nrc });
+      toast.success(`Farmer found: ${farmer.firstName}`);
+    } else {
+      setFoundFarmer(null);
+      toast.error("Farmer not found in system. Please verify registration.");
+    }
+    setIsLookingUp(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!foundFarmer) {
+      toast.error("Please lookup a valid farmer first.");
+      return;
+    }
+    if (!formData.weight || parseFloat(formData.weight) <= 0) {
+      toast.error("Please enter a valid weight.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    toast.success("Grain recording submitted and PRN generated!");
+    setIsSubmitting(false);
+    onBack();
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
       <div className="flex items-center gap-4">
@@ -22,15 +82,33 @@ export const GrainRecording = ({ onBack }: GrainRecordingProps) => {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Farmer NRC</label>
                 <div className="flex gap-2">
-                  <input className="flex-1 bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm" placeholder="000000/00/1" />
-                  <button className="bg-primary text-white px-4 rounded-2xl text-xs font-bold">Lookup</button>
+                  <input 
+                    name="nrc"
+                    value={formData.nrc}
+                    onChange={handleInputChange}
+                    className="flex-1 bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
+                    placeholder={UI_CONSTANTS.PLACEHOLDER_NRC} 
+                  />
+                  <button 
+                    onClick={handleLookup}
+                    disabled={isLookingUp}
+                    className="bg-primary text-white px-4 rounded-2xl text-xs font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isLookingUp ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                    Lookup
+                  </button>
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Crop Type</label>
-                <select className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm">
-                  <option>White Maize</option>
-                  <option>Soybeans</option>
+                <select 
+                  name="crop"
+                  value={formData.crop}
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
+                >
+                  <option>{MOCK_DEFAULTS.CROP_MAIZE}</option>
+                  <option>{MOCK_DEFAULTS.CROP_SOYBEANS}</option>
                   <option>Paddy Rice</option>
                 </select>
               </div>
@@ -39,15 +117,34 @@ export const GrainRecording = ({ onBack }: GrainRecordingProps) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Weight (kg)</label>
-                <input type="number" className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm" placeholder="0.00" />
+                <input 
+                  type="number" 
+                  name="weight"
+                  value={formData.weight}
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
+                  placeholder="0.00" 
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Moisture (%)</label>
-                <input type="number" className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm" placeholder="12.5" />
+                <input 
+                  type="number" 
+                  name="moisture"
+                  value={formData.moisture}
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
+                  placeholder="12.5" 
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Grade</label>
-                <select className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm">
+                <select 
+                  name="grade"
+                  value={formData.grade}
+                  onChange={handleInputChange}
+                  className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
+                >
                   <option>Grade 1</option>
                   <option>Grade 2</option>
                   <option>Grade 3</option>
@@ -58,7 +155,7 @@ export const GrainRecording = ({ onBack }: GrainRecordingProps) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Depot (Auto)</label>
-                <input className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm opacity-60" value="Choma Central" readOnly />
+                <input className="w-full bg-surface-container-low border-none rounded-2xl py-3 px-4 text-sm opacity-60" value={APP_CONFIG.ASSIGNED_DEPOT} readOnly />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Timestamp</label>
@@ -67,8 +164,12 @@ export const GrainRecording = ({ onBack }: GrainRecordingProps) => {
             </div>
           </div>
 
-          <button className="w-full primary-gradient text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-primary/20">
-            Submit & Generate PRN
+          <button 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="w-full primary-gradient text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-primary/20 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : 'Submit & Generate PRN'}
           </button>
         </div>
 
@@ -80,23 +181,23 @@ export const GrainRecording = ({ onBack }: GrainRecordingProps) => {
             </div>
             <div className="border-2 border-dashed border-black/10 p-6 rounded-2xl space-y-4 font-mono text-xs">
               <div className="text-center pb-4 border-b border-dashed border-black/10">
-                <p className="font-bold text-sm">FRA ZAMBIA</p>
+                <p className="font-bold text-sm">{APP_CONFIG.ORGANIZATION}</p>
                 <p>Purchase Receipt Note</p>
               </div>
               <div className="space-y-1">
-                <div className="flex justify-between"><span>PRN NO:</span><span>PRN-TEMP-001</span></div>
+                <div className="flex justify-between"><span>PRN NO:</span><span>{MOCK_DEFAULTS.RECEIPT_PREFIX}-001</span></div>
                 <div className="flex justify-between"><span>DATE:</span><span>{new Date().toLocaleDateString()}</span></div>
-                <div className="flex justify-between"><span>DEPOT:</span><span>CHOMA CENTRAL</span></div>
+                <div className="flex justify-between"><span>DEPOT:</span><span>{APP_CONFIG.ASSIGNED_DEPOT.toUpperCase()}</span></div>
               </div>
               <div className="py-2 border-y border-dashed border-black/10 space-y-1">
-                <div className="flex justify-between"><span>FARMER:</span><span>MUTALE KAPWEPWE</span></div>
-                <div className="flex justify-between"><span>NRC:</span><span>482910/11/1</span></div>
+                <div className="flex justify-between"><span>FARMER:</span><span className="font-bold">{foundFarmer ? foundFarmer.name.toUpperCase() : '---'}</span></div>
+                <div className="flex justify-between"><span>NRC:</span><span>{foundFarmer ? foundFarmer.nrc : '---'}</span></div>
               </div>
               <div className="space-y-1">
-                <div className="flex justify-between font-bold"><span>CROP:</span><span>WHITE MAIZE</span></div>
-                <div className="flex justify-between"><span>WEIGHT:</span><span>420.00 KG</span></div>
-                <div className="flex justify-between"><span>GRADE:</span><span>GRADE 1</span></div>
-                <div className="flex justify-between"><span>MOISTURE:</span><span>12.8%</span></div>
+                <div className="flex justify-between font-bold"><span>CROP:</span><span>{formData.crop.toUpperCase()}</span></div>
+                <div className="flex justify-between"><span>WEIGHT:</span><span>{formData.weight || '0.00'} KG</span></div>
+                <div className="flex justify-between"><span>GRADE:</span><span>{formData.grade.toUpperCase()}</span></div>
+                <div className="flex justify-between"><span>MOISTURE:</span><span>{formData.moisture}%</span></div>
               </div>
               <div className="pt-4 text-center">
                 <QrCode size={64} className="mx-auto mb-2 opacity-20" />

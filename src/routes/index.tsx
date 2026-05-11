@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createHashRouter, Navigate, Outlet } from 'react-router-dom';
 import AppShell from '@/src/components/layout/AppShell';
 import Login from '@/src/pages/auth/Login';
 import Dashboard from '@/src/pages/dashboard/Dashboard';
@@ -16,6 +16,23 @@ import Profile from '@/src/pages/profile/Profile';
 import Settings from '@/src/pages/settings/Settings';
 import { User, UserRole } from '@/src/types';
 
+interface ProtectedRouteProps {
+  user: User | null;
+  allowedRoles?: UserRole[];
+}
+
+const ProtectedRoute = ({ user, allowedRoles }: ProtectedRouteProps) => {
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+};
+
 interface RouterProps {
   user: User | null;
   onLogin: (user: User) => void;
@@ -24,67 +41,83 @@ interface RouterProps {
 }
 
 export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange }: RouterProps) => {
-  return createBrowserRouter([
+  return createHashRouter([
     {
       path: '/login',
       element: user ? <Navigate to="/dashboard" replace /> : <Login onLogin={onLogin} />,
+    },
+    {
+      path: '/registration',
+      element: <Registration />,
     },
     {
       path: '/',
       element: <AppShell user={user} onLogout={onLogout} onRoleChange={onRoleChange} />,
       children: [
         {
-          index: true,
-          element: <Navigate to="/dashboard" replace />,
-        },
-        {
-          path: 'dashboard',
-          element: user ? <Dashboard role={user.role} /> : <Navigate to="/login" />,
-        },
-        {
-          path: 'vouchers',
-          element: user ? <Vouchers role={user.role} /> : <Navigate to="/login" />,
-        },
-        {
-          path: 'deliveries',
-          element: <Deliveries />,
-        },
-        {
-          path: 'stock',
-          element: user ? <Stock role={user.role} /> : <Navigate to="/login" />,
-        },
-        {
-          path: 'logistics',
-          element: user ? <Logistics role={user.role} /> : <Navigate to="/login" />,
-        },
-        {
-          path: 'registration',
-          element: <Registration />,
-        },
-        {
-          path: 'payments',
-          element: user?.role === UserRole.FARMER ? <Navigate to="/wallet" replace /> : <Payments />,
-        },
-        {
-          path: 'wallet',
-          element: user?.role === UserRole.FARMER ? <Wallet user={user} /> : <Navigate to="/dashboard" replace />,
-        },
-        {
-          path: 'security',
-          element: <Security />,
-        },
-        {
-          path: 'production',
-          element: user ? <FarmProduction /> : <Navigate to="/login" />,
-        },
-        {
-          path: 'profile',
-          element: user ? <Profile user={user} onLogout={onLogout} /> : <Navigate to="/login" />,
-        },
-        {
-          path: 'settings',
-          element: user ? <Settings /> : <Navigate to="/login" />,
-        },
+          element: <ProtectedRoute user={user} />,
+          children: [
+            {
+              index: true,
+              element: <Navigate to="/dashboard" replace />,
+            },
+            {
+              path: 'dashboard',
+              element: <Dashboard role={user?.role || UserRole.FARMER} />,
+            },
+            {
+              path: 'vouchers',
+              element: <Vouchers role={user?.role || UserRole.FARMER} />,
+            },
+            {
+                path: 'deliveries',
+                element: <Deliveries />,
+            },
+            {
+              path: 'stock',
+              element: <Stock role={user?.role || UserRole.FARMER} />,
+            },
+            {
+              path: 'logistics',
+              element: <Logistics role={user?.role || UserRole.FARMER} />,
+            },
+            {
+              path: 'profile',
+              element: <Profile user={user!} onLogout={onLogout} />,
+            },
+            {
+              path: 'settings',
+              element: <Settings />,
+            },
+            // Role specific routes
+            {
+              element: <ProtectedRoute user={user} allowedRoles={[UserRole.FARMER]} />,
+              children: [
+                {
+                  path: 'wallet',
+                  element: <Wallet user={user!} />,
+                },
+                {
+                    path: 'production',
+                    element: <FarmProduction />,
+                },
+              ]
+            },
+            {
+                element: <ProtectedRoute user={user} allowedRoles={[UserRole.ADMIN, UserRole.AGENT, UserRole.OFFICER]} />,
+                children: [
+                  {
+                    path: 'payments',
+                    element: <Payments />,
+                  },
+                  {
+                    path: 'security',
+                    element: <Security />,
+                  },
+                ]
+            }
+          ]
+        }
       ],
     },
     {

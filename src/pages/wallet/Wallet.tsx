@@ -118,7 +118,21 @@ export const Wallet = ({ user }: WalletProps) => {
       <div className="bg-surface-container-lowest rounded-[2.5rem] border border-black/5 shadow-sm p-8">
         <div className="flex justify-between items-center mb-8">
           <h3 className="text-xl font-bold font-headline text-neutral-900">Transaction History</h3>
-          <button className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-opacity">
+          <button 
+            onClick={() => {
+              const csvContent = "data:text/csv;charset=utf-8," 
+                + "ID,Date,Source,Amount (ZMW),Type,Status\n"
+                + transactions.map(t => `${t.id},${t.date},${t.source},${t.amount},${t.type},${t.status}`).join("\n");
+              const encodedUri = encodeURI(csvContent);
+              const link = document.createElement("a");
+              link.setAttribute("href", encodedUri);
+              link.setAttribute("download", `wallet_statement_${user.name.replace(/\s+/g, '_')}.csv`);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-opacity"
+          >
             <Download size={14} /> Full Statement
           </button>
         </div>

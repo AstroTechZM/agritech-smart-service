@@ -7,6 +7,9 @@ export const MOCK_USERS: Record<UserRole, User> = {
   [UserRole.ADMIN]: { id: '4', name: 'Mubita Mwanawasa', role: UserRole.ADMIN, avatar: 'https://picsum.photos/seed/admin1/200', email: 'admin@agriculture.gov.zm' },
 };
 
+// Store newly registered farmers during the session
+export const REGISTERED_FARMERS: any[] = [];
+
 export const MOCK_USER: User = {
   id: '1',
   user_id: 1,

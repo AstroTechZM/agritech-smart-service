@@ -6,12 +6,13 @@
  *    - If you want to return two things (like a <div> and a Modal), you wrap them in 
  *      an empty tag called a "Fragment." It's like an invisible container.
  */
-import React, { useState } from 'react';
-import { Truck, Navigation, AlertTriangle, CheckCircle2, User as UserIcon, Map as MapIcon } from 'lucide-react'; // Icons
+import React, { useState, useEffect } from 'react';
+import { Truck, Navigation, AlertTriangle, CheckCircle2, User as UserIcon, Map as MapIcon, Loader2 } from 'lucide-react'; // Icons
 import { motion, AnimatePresence } from 'motion/react'; // Animation tools
 import { cn } from '@/src/lib/utils'; // Styling helper
 import { UserRole } from '@/src/types'; // User roles
-import { MOCK_SHIPMENTS } from '@/src/data/mockData'; // Dummy data for the list
+import { api } from '@/src/services/api';
+import { useApi } from '@/src/hooks/useApi';
 
 interface LogisticsProps {
   role: UserRole;
@@ -21,18 +22,31 @@ export const Logistics = ({ role }: LogisticsProps) => {
   const isFarmer = role === UserRole.FARMER;
   const isClerk = role === UserRole.AGENT;
 
-  // NOTE: This is hardcoded logic for the demo.
   const assignedDepot = 'Kasama Hub'; 
 
-  /**
-   * 2. MODAL STATE:
-   *    - We use this to track which shipment details to show in a "popup" (modal).
-   *    - If it's 'null', no popup is shown. 
-   *    - If it contains a shipment object, the popup appears!
-   */
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
+  const { data: shipments, isLoading, setData: setShipments } = useApi(api.fetchShipments);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const shipments = MOCK_SHIPMENTS;
+  const filteredShipments = (shipments || []).filter(s => 
+    s.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    s.vehicle.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const updateShipmentStatus = (id: string, newStatus: string) => {
+    if (!shipments) return;
+    setShipments(shipments.map(s => s.id === id ? { ...s, status: newStatus } : s));
+    setSelectedShipment(null); // Close modal after action
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest">Loading Logistics Data...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -46,7 +60,10 @@ export const Logistics = ({ role }: LogisticsProps) => {
             </h2>
           </div>
           {!isClerk && (
-            <button className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-primary/10 transition-colors text-primary">
+            <button 
+              onClick={() => alert("Opening Live Fleet Tracking interface...")}
+              className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-primary/10 transition-colors text-primary"
+            >
               <Navigation size={16} /> Live Tracking
             </button>
           )}
@@ -55,40 +72,48 @@ export const Logistics = ({ role }: LogisticsProps) => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* LEFT COLUMN: List of shipments */}
           <div className="lg:col-span-8 space-y-6">
-            {shipments.map((shipment) => (
-              <div
-                key={shipment.id}
-                // When clicked, we "select" this shipment to show its details in the modal
-                onClick={() => setSelectedShipment(shipment)}
-                className="bg-surface-container-lowest p-6 rounded-[2rem] border border-black/5 shadow-sm flex flex-col md:flex-row md:items-center gap-6 cursor-pointer hover:border-primary/30 transition-all hover:shadow-md group"
-              >
-                <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                  <Truck size={32} />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">{shipment.id}</span>
-                    <span className={cn(
-                      "px-2 py-0.5 rounded text-[8px] font-bold uppercase",
-                      shipment.status === 'IN TRANSIT' ? "bg-tertiary/10 text-tertiary" :
-                        shipment.status === 'LOADING' ? "bg-primary/10 text-primary" : "bg-neutral-100 text-neutral-400"
-                    )}>
-                      {shipment.status}
-                    </span>
+            {filteredShipments.length > 0 ? (
+              filteredShipments.map((shipment) => (
+                <div
+                  key={shipment.id}
+                  // When clicked, we "select" this shipment to show its details in the modal
+                  onClick={() => setSelectedShipment(shipment)}
+                  className="bg-surface-container-lowest p-6 rounded-[2rem] border border-black/5 shadow-sm flex flex-col md:flex-row md:items-center gap-6 cursor-pointer hover:border-primary/30 transition-all hover:shadow-md group"
+                >
+                  <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                    <Truck size={32} />
                   </div>
-                  <h4 className="font-bold text-lg">{shipment.cargo}</h4>
-                  <div className="flex items-center gap-4 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><MapIcon size={12} /> {shipment.from}</span>
-                    {!isClerk && <ArrowRight size={12} />}
-                    <span className="flex items-center gap-1 text-primary"><MapIcon size={12} /> {shipment.to}</span>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-primary uppercase tracking-widest">{shipment.id}</span>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded text-[8px] font-bold uppercase",
+                        shipment.status === 'IN TRANSIT' ? "bg-tertiary/10 text-tertiary" :
+                          shipment.status === 'LOADING' ? "bg-primary/10 text-primary" : 
+                            shipment.status === 'DELAYED' ? "bg-error/10 text-error" :
+                              "bg-neutral-100 text-neutral-400"
+                      )}>
+                        {shipment.status}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-lg">{shipment.cargo}</h4>
+                    <div className="flex items-center gap-4 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                      <span className="flex items-center gap-1"><MapIcon size={12} /> {shipment.from}</span>
+                      {!isClerk && <ArrowRight size={12} />}
+                      <span className="flex items-center gap-1 text-primary"><MapIcon size={12} /> {shipment.to}</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase mb-1">Estimated Arrival</p>
+                    <p className="text-sm font-black text-primary">{shipment.eta}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase mb-1">Estimated Arrival</p>
-                  <p className="text-sm font-black text-primary">{shipment.eta}</p>
-                </div>
+              ))
+            ) : (
+              <div className="bg-surface-container-lowest p-12 rounded-[2rem] border border-black/5 text-center text-neutral-400 font-bold">
+                No shipments found matching your search.
               </div>
-            ))}
+            )}
           </div>
 
           {/* RIGHT COLUMN: Sidebar / Fleet Search */}
@@ -101,11 +126,19 @@ export const Logistics = ({ role }: LogisticsProps) => {
                   <div className="space-y-4">
                     <input
                       type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="e.g. ABZ 1234 or TRK-202"
                       className="w-full bg-white px-5 py-4 rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary/20 text-sm font-bold placeholder:text-neutral-300 shadow-sm"
                     />
                   </div>
-                  <button className="w-full bg-primary hover:bg-primary/90 text-white p-4 rounded-2xl font-bold transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group mt-4">
+                  <button 
+                    onClick={() => {
+                      if(searchQuery) alert(`Connecting to GPS relay for: ${searchQuery}...`);
+                      else alert('Please enter a tracking ID or vehicle plate first.');
+                    }}
+                    className="w-full bg-primary hover:bg-primary/90 text-white p-4 rounded-2xl font-bold transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group mt-4"
+                  >
                     <Navigation size={18} className="group-hover:rotate-45 transition-transform duration-300" /> Locate Vehicle
                   </button>
                 </div>
@@ -208,7 +241,8 @@ export const Logistics = ({ role }: LogisticsProps) => {
                     "px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border",
                     selectedShipment.status === 'IN TRANSIT' ? "bg-tertiary text-white border-tertiary/20 shadow-tertiary/20" :
                       selectedShipment.status === 'LOADING' ? "bg-white text-primary border-primary/20 animate-pulse shadow-primary/10" :
-                        "bg-primary text-white border-primary/20 shadow-primary/20"
+                        selectedShipment.status === 'DELAYED' ? "bg-error text-white border-error/20 shadow-error/20" :
+                          "bg-primary text-white border-primary/20 shadow-primary/20"
                   )}>
                     {selectedShipment.status}
                   </span>
@@ -219,10 +253,16 @@ export const Logistics = ({ role }: LogisticsProps) => {
                   <div className="pt-2 space-y-3">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 text-center">Destination Actions</p>
                     <div className="flex gap-4">
-                      <button className="flex-1 bg-error/10 hover:bg-error/20 text-error px-4 py-3.5 rounded-2xl font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => updateShipmentStatus(selectedShipment.id, 'DELAYED')}
+                        className="flex-1 bg-error/10 hover:bg-error/20 text-error px-4 py-3.5 rounded-2xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                      >
                         <AlertTriangle size={16} /> Flag Problem
                       </button>
-                      <button className="flex-1 bg-primary hover:bg-primary/90 text-white px-4 py-3.5 rounded-2xl font-bold text-sm transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => updateShipmentStatus(selectedShipment.id, 'DELIVERED')}
+                        className="flex-1 bg-primary hover:bg-primary/90 text-white px-4 py-3.5 rounded-2xl font-bold text-sm transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                      >
                         <CheckCircle2 size={16} /> Confirm Arrival
                       </button>
                     </div>

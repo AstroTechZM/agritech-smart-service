@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Bell, Globe, Moon, Shield, Smartphone } from 'lucide-react';
 
 export const Settings = () => {
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [language, setLanguage] = useState('English');
+  const [darkMode, setDarkMode] = useState(false);
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -23,7 +27,12 @@ export const Settings = () => {
             </div>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" defaultChecked />
+            <input 
+              type="checkbox" 
+              className="sr-only peer" 
+              checked={pushEnabled}
+              onChange={() => setPushEnabled(!pushEnabled)}
+            />
             <div className="w-14 h-7 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
           </label>
         </div>
@@ -39,7 +48,11 @@ export const Settings = () => {
               <p className="text-sm text-neutral-500 font-medium">Select your preferred language for the application interface.</p>
             </div>
           </div>
-          <select className="bg-surface-container-low border border-black/5 rounded-2xl px-4 py-2 font-bold text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+          <select 
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="bg-surface-container-low border border-black/5 rounded-2xl px-4 py-2 font-bold text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+          >
             <option>English</option>
             <option>Nyanja</option>
             <option>Bemba</option>
@@ -59,7 +72,12 @@ export const Settings = () => {
             </div>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" />
+            <input 
+              type="checkbox" 
+              className="sr-only peer" 
+              checked={darkMode}
+              onChange={() => setDarkMode(!darkMode)}
+            />
             <div className="w-14 h-7 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary"></div>
           </label>
         </div>
