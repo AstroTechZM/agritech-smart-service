@@ -1,0 +1,29 @@
+[
+  { 
+    "id": "INS-001", 
+    "title": "Optimal Planting Window: Maize", 
+    "content": "Current soil moisture levels in Eastern Province are optimal for early planting. If your land is prepared, consider starting sowing this week for better root establishment.", 
+    "category": "PLANTING", 
+    "priority": "HIGH", 
+    "validUntil": "2026-11-30", 
+    "tags": ["Maize", "Planting"] 
+  },
+  { 
+    "id": "INS-002", 
+    "title": "Fall Armyworm Warning", 
+    "content": "Isolated sightings of Fall Armyworm reported in neighboring districts. Scout your fields twice weekly and ensure you have access to pheromone traps or recommended insecticides.", 
+    "category": "PEST_CONTROL", 
+    "priority": "MEDIUM", 
+    "validUntil": "2026-12-15", 
+    "tags": ["Pests", "Warning"] 
+  },
+  { 
+    "id": "INS-003", 
+    "title": "Top Dressing Fertilizer Guide", 
+    "content": "For crops at the 4-6 leaf stage, Urea application is now recommended. Ensure soil is moist before application for maximum nitrate uptake.", 
+    "category": "FERTILIZER", 
+    "priority": "MEDIUM", 
+    "validUntil": "2026-12-30", 
+    "tags": ["Fertilizer", "Urea"] 
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "FARMER": {
+    "id": "1",
+    "user_id": 1,
+    "first_name": "Henry",
+    "last_name": "Mate",
+    "name": "Henry Mate",
+    "role": "FARMER",
+    "avatar": "https://picsum.photos/seed/farmer/200",
+    "nrc": "852016/10/1"
+  },
+  "AGRO_DEALER": {
+    "id": "2",
+    "name": "Chanda Mwila",
+    "role": "AGRO_DEALER",
+    "avatar": "https://picsum.photos/seed/dealer/200",
+    "email": "chanda@agrigrow.zm"
+  },
+  "AGENT": {
+    "id": "3",
+    "name": "John Doe",
+    "role": "AGENT",
+    "avatar": "https://picsum.photos/seed/clerk/200",
+    "nrc": "482910/11/1",
+    "district": "Choma"
+  },
+  "ADMIN": {
+    "id": "4",
+    "name": "Mubita Mwanawasa",
+    "role": "ADMIN",
+    "avatar": "https://picsum.photos/seed/admin1/200",
+    "email": "admin@agriculture.gov.zm",
+    "district": "Lusaka Central"
+  }
+}

@@ -15,7 +15,6 @@ interface LoginProps {
 export const Login = ({ onLogin }: LoginProps) => {
   const navigate = useNavigate();
   const { findFarmerByNRC } = useFarmers();
-  const [role, setRole] = useState<UserRole>(UserRole.FARMER);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,34 +29,33 @@ export const Login = ({ onLogin }: LoginProps) => {
     // Simulate authentication delay
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // 1. Check Mock Admin/Agent Users
-    const mockUser = MOCK_USERS[role];
-    const isValidMock = (role !== UserRole.FARMER && identifier === mockUser.email) || 
-                       (role === UserRole.FARMER && identifier === mockUser.nrc);
+    // 1. Check Mock Users (Admin, Agent, Agro Dealer, etc.)
+    const matchedMockUser = Object.values(MOCK_USERS).find(user => 
+      (user.email && user.email.toLowerCase() === identifier.toLowerCase()) || 
+      (user.nrc && user.nrc === identifier)
+    );
 
-    if (isValidMock) {
-      onLogin(mockUser);
-      toast.success(`Welcome back, ${mockUser.name || mockUser.first_name}!`);
+    if (matchedMockUser) {
+      onLogin(matchedMockUser);
+      toast.success(`Welcome back, ${matchedMockUser.name || matchedMockUser.first_name}!`);
       setIsLoading(false);
       return;
     }
 
     // 2. Check Persisted Farmers (FarmerContext)
-    if (role === UserRole.FARMER) {
-      const farmer = findFarmerByNRC(identifier);
-      if (farmer) {
-        onLogin({
-          id: `F-${farmer.nrc}`,
-          name: `${farmer.firstName} ${farmer.lastName}`,
-          role: UserRole.FARMER,
-          nrc: farmer.nrc,
-          district: farmer.district,
-          email: `${farmer.firstName.toLowerCase()}@example.zm`
-        });
-        toast.success(`Welcome back, ${farmer.firstName}!`);
-        setIsLoading(false);
-        return;
-      }
+    const farmer = findFarmerByNRC(identifier);
+    if (farmer) {
+      onLogin({
+        id: `F-${farmer.nrc}`,
+        name: `${farmer.firstName} ${farmer.lastName}`,
+        role: UserRole.FARMER,
+        nrc: farmer.nrc,
+        district: farmer.district,
+        email: `${farmer.firstName.toLowerCase()}@example.zm`
+      });
+      toast.success(`Welcome back, ${farmer.firstName}!`);
+      setIsLoading(false);
+      return;
     }
 
     toast.error("Invalid credentials. Please try again.");
@@ -80,39 +78,19 @@ export const Login = ({ onLogin }: LoginProps) => {
         </div>
 
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-2 p-1 bg-surface-container-low rounded-2xl">
-            {(Object.values(UserRole)).map((r) => (
-              <button
-                key={r}
-                onClick={() => {
-                    setRole(r);
-                    setIdentifier('');
-                }}
-                className={cn(
-                  "py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                  role === r ? "bg-primary text-white shadow-md" : "text-neutral-500 hover:bg-black/5"
-                )}
-              >
-                {r.replace('_', ' ')}
-              </button>
-            ))}
-          </div>
-
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">
-                {role === UserRole.FARMER ? 'NRC Number' : 'Work Email'}
+                NRC Number or Work Email
               </label>
               <input
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder={role === UserRole.FARMER ? "000000/00/1" : "officer@mafs.gov.zm"}
+                placeholder="e.g. 000000/00/1 or admin@mafs.gov.zm"
                 className="w-full bg-surface-container-low border-none rounded-2xl py-3.5 px-5 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
               />
-              {role === UserRole.FARMER && (
-                <p className="text-[9px] text-neutral-400 font-medium ml-1">Use your registered NRC to log in.</p>
-              )}
+              <p className="text-[9px] text-neutral-400 font-medium ml-1">Enter your registered NRC or official work email.</p>
             </div>
 
             <div className="space-y-1.5">

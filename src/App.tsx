@@ -11,16 +11,16 @@ import { FarmerProvider } from '@/src/context/FarmerContext';
 export const App = () => {
   // Authentication State
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('agritech_user');
+    const savedUser = localStorage.getItem('agritech_user_v2');
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
   // Persist user to localStorage
   useEffect(() => {
     if (user) {
-      localStorage.setItem('agritech_user', JSON.stringify(user));
+      localStorage.setItem('agritech_user_v2', JSON.stringify(user));
     } else {
-      localStorage.removeItem('agritech_user');
+      localStorage.removeItem('agritech_user_v2');
     }
   }, [user]);
 

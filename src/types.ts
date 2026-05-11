@@ -20,6 +20,7 @@ export interface User {
   nrc_number?: number;
   role: UserRole;
   avatar: string;
+  district?: string;
 }
 
 export interface Farmer {

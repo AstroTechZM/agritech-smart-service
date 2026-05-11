@@ -1,0 +1,8 @@
+[
+  { "id": "TX-9021", "farmerId": "1", "amount": 3360, "type": "PAYOUT", "source": "FRA Maize Sale", "status": "COMPLETED", "date": "02 Apr 2026" },
+  { "id": "TX-8910", "farmerId": "1", "amount": 1500, "type": "WITHDRAWAL", "source": "Airtel Money", "status": "COMPLETED", "date": "01 Apr 2026" },
+  { "id": "TX-8805", "farmerId": "1", "amount": 7200, "type": "PAYOUT", "source": "FRA Maize Sale", "status": "COMPLETED", "date": "28 Mar 2026" },
+  { "id": "TX-8700", "farmerId": "1", "amount": 2000, "type": "WITHDRAWAL", "source": "MTN Mobile Money", "status": "COMPLETED", "date": "25 Mar 2026" },
+  { "id": "TX-8650", "farmerId": "1", "amount": 4850.00, "type": "DEPOSIT", "source": "FISP Refund", "status": "COMPLETED", "date": "20 Mar 2026" },
+  { "id": "TX-8500", "farmerId": "1", "amount": 1200, "type": "WITHDRAWAL", "source": "MTN Mobile Money", "status": "PENDING", "date": "Today, 10:15" }
+]

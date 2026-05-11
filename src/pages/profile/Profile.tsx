@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from '@/src/types';
 import { User as UserIcon, Mail, Phone, MapPin, Shield, Edit3, LogOut } from 'lucide-react';
 

@@ -10,6 +10,7 @@ import { Package, Search, Bell, CheckCircle2, History, X, ChevronRight, ArrowRig
 import { User } from '../../types'; // Data structure definition
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { MOCK_DEFAULTS } from '@/src/constants';
 
 export const TopBar = ({ user, onMenuToggle, activeTab }: {
   user: User;
@@ -98,7 +99,7 @@ export const TopBar = ({ user, onMenuToggle, activeTab }: {
                     <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Recent Searches</p>
                   </div>
                   <div className="p-2">
-                    {['D-Compound Fertilizer', 'Farmer: Mumba Chileshe', 'Voucher #FRA-9921'].map((item, idx) => (
+                    {['D-Compound Fertilizer', `Farmer: ${MOCK_DEFAULTS.FARMER_NAME}`, 'Voucher #FRA-9921'].map((item, idx) => (
                       <button key={idx} className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-surface-container-low transition-colors group">
                         <div className="flex items-center gap-3">
                           <History size={16} className="text-neutral-400" />

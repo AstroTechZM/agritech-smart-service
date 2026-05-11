@@ -10,11 +10,17 @@ import { Calendar, Download, ChevronRight } from 'lucide-react'; // Icons
 import { motion } from 'motion/react'; // Animation library
 import { cn } from '@/src/lib/utils'; // Styling helper
 
+import { User } from '@/src/types';
+
 /**
  * 2. COMPONENT: AdminDashboard
  *    The main control center for District Administrators.
  */
-export const AdminDashboard = () => {
+interface AdminDashboardProps {
+  user: User | null;
+}
+
+export const AdminDashboard = ({ user }: AdminDashboardProps) => {
   return (
     // 'animate-in' and 'fade-in' are CSS animations that run when the page loads.
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -22,8 +28,8 @@ export const AdminDashboard = () => {
       {/* HEADER SECTION */}
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="text-3xl font-black font-headline tracking-tight">District Admin Dashboard</h2>
-          <p className="text-sm text-neutral-500">Lusaka Central District • Friday, Oct 24, 2024</p>
+          <h2 className="text-3xl font-black font-headline tracking-tight">{user?.name || 'District Admin Dashboard'}</h2>
+          <p className="text-sm text-neutral-500">{user?.district || 'Lusaka Central'} District • Friday, Oct 24, 2024</p>
         </div>
         <div className="flex gap-3">
           <button className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2">

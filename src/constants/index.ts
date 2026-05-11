@@ -26,11 +26,15 @@ export const LOGIC_CONSTANTS = {
   INITIAL_WALLET_BALANCE: 4850.00,
   TX_ID_MIN: 1000,
   TX_ID_MAX: 9000,
+  FRA_BUYING_PRICE: 280.00,
+  FRA_PRICE_TREND: '▲ 5%',
+  FRA_UNIT: '50kg bag',
+  FRA_CROP: 'White Maize',
 };
 
 export const MOCK_DEFAULTS = {
-  FARMER_NAME: 'Mutale Kapwepwe',
-  FARMER_NRC: '482910/11/1',
+  FARMER_NAME: 'Henry Mate',
+  FARMER_NRC: '852016/10/1',
   CROP_MAIZE: 'White Maize',
   CROP_SOYBEANS: 'Soybeans',
   RECEIPT_PREFIX: 'PRN-TEMP',

@@ -4,7 +4,13 @@ import { Package, Users, Clock, History, Scale, Receipt, ChevronRight, ArrowRigh
 import GrainRecording from './components/GrainRecording';
 import { APP_CONFIG, LOGIC_CONSTANTS, MOCK_DEFAULTS } from '@/src/constants';
 
-export const AgentDashboard = () => {
+import { User } from '@/src/types';
+
+interface AgentDashboardProps {
+  user: User | null;
+}
+
+export const AgentDashboard = ({ user }: AgentDashboardProps) => {
   const navigate = useNavigate();
   const [showRecording, setShowRecording] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);

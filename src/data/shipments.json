@@ -1,0 +1,5 @@
+[
+  { "id": "TRK-202", "from": "Central Depot", "to": "Kasama Hub", "status": "IN TRANSIT", "eta": "2h 15m", "cargo": "400 Bags Urea", "agent": "James Phiri", "bags": 400, "dispatched": "08:30 AM", "vehicle": "Scania R450 (ABZ 1234)" },
+  { "id": "TRK-105", "from": "Lusaka Plant", "to": "Choma Depot", "status": "LOADING", "eta": "Tomorrow", "cargo": "Maize Seeds", "agent": "Sarah Banda", "bags": 1200, "dispatched": "Pending", "vehicle": "Volvo FH16 (BCA 9876)" },
+  { "id": "TRK-309", "from": "Southern Hub", "to": "Farmer Group A", "status": "DELIVERED", "eta": "Completed", "cargo": "D-Compound", "agent": "Michael Zulu", "bags": 250, "dispatched": "Yesterday, 14:00", "vehicle": "Isuzu FTR (XYZ 4567)" }
+]

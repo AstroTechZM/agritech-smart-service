@@ -1,0 +1,5 @@
+[
+  { "id": "V-9921", "type": "D-Compound Fertilizer", "allocation": "8 Bags", "expiryDate": "30 Nov 2026", "status": "ACTIVE", "pinCode": "829 401" },
+  { "id": "V-8810", "type": "Maize Seed (10kg)", "allocation": "2 Bags", "expiryDate": "05 Sep 2026", "status": "REDEEMED", "pinCode": "112 334" },
+  { "id": "V-7705", "type": "Urea Fertilizer", "allocation": "4 Bags", "expiryDate": "20 Oct 2024", "status": "EXPIRED", "pinCode": "556 778" }
+]

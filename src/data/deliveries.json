@@ -1,0 +1,6 @@
+[
+  { "id": "DEL-1042", "date": "02 Apr 2026", "produceType": "White Maize", "weight": "2,500 kg", "grade": "A", "moisture": "12.5%", "amount": "ZMW 12,500", "paymentStatus": "PROCESSING", "depot": "Kasama Hub" },
+  { "id": "DEL-0988", "date": "15 Mar 2026", "produceType": "Soybeans", "weight": "850 kg", "grade": "B", "moisture": "11.0%", "amount": "ZMW 6,800", "paymentStatus": "PAID", "depot": "Kasama District Depot" },
+  { "id": "DEL-0821", "date": "10 May 2025", "produceType": "White Maize", "weight": "3,200 kg", "grade": "A", "moisture": "12.8%", "amount": "ZMW 16,000", "paymentStatus": "PAID", "depot": "Kasama District Depot" },
+  { "id": "DEL-0750", "date": "28 Apr 2025", "produceType": "Groundnuts", "weight": "400 kg", "grade": "A", "moisture": "8.2%", "amount": "ZMW 4,000", "paymentStatus": "PAID", "depot": "Mongu Hub" }
+]

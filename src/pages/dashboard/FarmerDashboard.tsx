@@ -1,30 +1,35 @@
-/**
- * REACT BEGINNER'S GUIDE:
- * 
- * 1. IMPORTS & LIBRARIES:
- *    - 'useNavigate' is a tool from React Router that lets us move between pages.
- *    - 'lucide-react' provides the beautiful icons you see on the dashboard.
- */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, TrendingUp, Ticket, Package, CheckCircle2, ChevronRight, ArrowRight, Sprout } from 'lucide-react';
-import { MOCK_DELIVERIES } from '@/src/data/mockData';
+import { MOCK_DELIVERIES, MOCK_AGRONOMY_INSIGHTS, MOCK_VOUCHERS } from '@/src/data/mockData';
+import { useWallet } from '@/src/context/WalletContext';
+import { LOGIC_CONSTANTS, MOCK_DEFAULTS } from '@/src/constants';
+import { User } from '@/src/types';
 import { cn } from '@/src/lib/utils';
 
 /**
  * 2. COMPONENT: FarmerDashboard
  *    This is the main screen a Farmer sees when they log in.
  */
-export const FarmerDashboard = () => {
+interface FarmerDashboardProps {
+  user: User | null;
+}
+
+export const FarmerDashboard = ({ user }: FarmerDashboardProps) => {
   // 'navigate' is our function for jumping to other pages like '/wallet'
   const navigate = useNavigate();
+  const { balance } = useWallet();
+  
+  // Get the latest insight and voucher
+  const latestInsight = MOCK_AGRONOMY_INSIGHTS[0];
+  const activeVoucher = MOCK_VOUCHERS.find(v => v.status === 'ACTIVE') || MOCK_VOUCHERS[0];
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-end">
         <div>
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Zambia Ministry of Agriculture</span>
-          <h2 className="text-3xl font-black font-headline tracking-tight">Mumba Chileshe</h2>
+          <h2 className="text-3xl font-black font-headline tracking-tight">{user?.name || MOCK_DEFAULTS.FARMER_NAME}</h2>
         </div>
       </div>
 
@@ -38,7 +43,7 @@ export const FarmerDashboard = () => {
               <span className="text-xs font-bold uppercase tracking-widest opacity-80">Farmer Wallet Balance</span>
               <Wallet size={24} className="opacity-80" />
             </div>
-            <h3 className="text-5xl font-black font-headline">ZMW 4,850.00</h3>
+            <h3 className="text-5xl font-black font-headline">ZMW {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
             <button
               onClick={() => navigate('/wallet')}
               className="w-full bg-white/20 backdrop-blur-md border border-white/10 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-white/30 transition-all font-headline"
@@ -57,17 +62,20 @@ export const FarmerDashboard = () => {
             <div className="flex-1">
               <p className="text-[10px] font-bold uppercase text-neutral-500">FRA Buying Price</p>
               <div className="flex items-baseline gap-2">
-                <p className="text-xl font-black font-headline">ZMW 280.00</p>
-                <span className="text-[10px] text-primary font-bold">▲ 5%</span>
+                <p className="text-xl font-black font-headline">ZMW {LOGIC_CONSTANTS.FRA_BUYING_PRICE.toFixed(2)}</p>
+                <span className="text-[10px] text-primary font-bold">{LOGIC_CONSTANTS.FRA_PRICE_TREND}</span>
               </div>
-              <p className="text-[10px] text-neutral-400">per 50kg bag (White Maize)</p>
+              <p className="text-[10px] text-neutral-400">per {LOGIC_CONSTANTS.FRA_UNIT} ({LOGIC_CONSTANTS.FRA_CROP})</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Seasonal Advice Banner */}
-      <div className="bg-primary/5 border border-primary/10 p-6 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 group cursor-pointer hover:bg-primary/10 transition-all">
+      <div 
+        onClick={() => navigate('/production')}
+        className="bg-primary/5 border border-primary/10 p-6 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 group cursor-pointer hover:bg-primary/10 transition-all"
+      >
         <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/20 shrink-0">
           <Sprout size={32} />
         </div>
@@ -76,11 +84,10 @@ export const FarmerDashboard = () => {
             <span className="px-2 py-0.5 bg-primary text-white text-[8px] font-black rounded uppercase tracking-widest">Priority Advice</span>
             <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Seasonal Recommendations</p>
           </div>
-          <h3 className="text-lg font-bold leading-tight">Optimal Planting Window: Maize</h3>
-          <p className="text-sm text-neutral-600 font-medium mt-1">Current soil moisture levels are optimal. Consider starting sowing this week for better results.</p>
+          <h3 className="text-lg font-bold leading-tight">{latestInsight.title}</h3>
+          <p className="text-sm text-neutral-600 font-medium mt-1 line-clamp-2">{latestInsight.content}</p>
         </div>
         <button
-          onClick={() => navigate('/production')}
           className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-primary shadow-sm hover:shadow-md transition-all flex items-center gap-2"
         >
           View Full Guide <ArrowRight size={16} />
@@ -101,19 +108,21 @@ export const FarmerDashboard = () => {
           <div className="bg-surface-container-lowest p-6 rounded-3xl border border-black/5 shadow-sm">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <p className="font-bold text-lg text-neutral-900">Maize Input D-Compound</p>
-                <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest">Voucher ID: #FRA-9921</p>
+                <p className="font-bold text-lg text-neutral-900">{activeVoucher.type}</p>
+                <p className="text-xs text-neutral-400 font-bold uppercase tracking-widest">Voucher ID: #{activeVoucher.id}</p>
               </div>
               <div className="text-right">
-                <span className="px-2 py-1 bg-primary/10 text-primary text-[8px] font-black rounded uppercase tracking-widest border border-primary/20">Active</span>
+                <span className="px-2 py-1 bg-primary/10 text-primary text-[8px] font-black rounded uppercase tracking-widest border border-primary/20">
+                  {activeVoucher.status}
+                </span>
               </div>
             </div>
             <div className="flex justify-between items-end">
               <div>
                 <p className="text-[10px] font-bold uppercase text-neutral-500">Allocation</p>
-                <p className="text-2xl font-black text-primary">8 Bags</p>
+                <p className="text-2xl font-black text-primary">{activeVoucher.allocation}</p>
               </div>
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Expires: 30 Nov 2026</p>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Expires: {activeVoucher.expiryDate}</p>
             </div>
           </div>
         </section>

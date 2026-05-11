@@ -63,7 +63,7 @@ export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange }: Route
             },
             {
               path: 'dashboard',
-              element: <Dashboard role={user?.role || UserRole.FARMER} />,
+              element: <Dashboard user={user} />,
             },
             {
               path: 'vouchers',

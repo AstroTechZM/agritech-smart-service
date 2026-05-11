@@ -6,21 +6,23 @@ import AgentDashboard from './AgentDashboard';
 import AdminDashboard from './AdminDashboard';
 
 interface DashboardProps {
-  role: UserRole;
+  user: User | null;
 }
 
-export const Dashboard = ({ role }: DashboardProps) => {
+export const Dashboard = ({ user }: DashboardProps) => {
+  const role = user?.role || UserRole.FARMER;
+  
   switch (role) {
     case UserRole.FARMER:
-      return <FarmerDashboard />;
+      return <FarmerDashboard user={user} />;
     case UserRole.AGRO_DEALER:
-      return <AgroDealerDashboard />;
+      return <AgroDealerDashboard user={user} />;
     case UserRole.AGENT:
-      return <AgentDashboard />;
+      return <AgentDashboard user={user} />;
     case UserRole.ADMIN:
-      return <AdminDashboard />;
+      return <AdminDashboard user={user} />;
     default:
-      return <FarmerDashboard />;
+      return <FarmerDashboard user={user} />;
   }
 };
 

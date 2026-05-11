@@ -21,7 +21,7 @@ interface FarmerContextType {
 
 const FarmerContext = createContext<FarmerContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'agritech_farmers';
+const STORAGE_KEY = 'agritech_farmers_v2';
 
 export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [farmers, setFarmers] = useState<Farmer[]>(() => {
