@@ -17,16 +17,19 @@ import {
   Info,
   CheckCircle2,
   Leaf
-} from 'lucide-react'; // Icons for the UI
-import { motion, AnimatePresence } from 'motion/react'; // Animations
-import { cn } from '@/src/lib/utils'; // Styling helper
-import { MOCK_FARM_PRODUCTION, MOCK_AGRONOMY_INSIGHTS } from '@/src/data/mockData'; // Data
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '@/src/lib/utils';
+import { MOCK_FARM_PRODUCTION, MOCK_AGRONOMY_INSIGHTS } from '@/src/data/mockData';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 /**
  * 2. COMPONENT: FarmProduction
  *    Tracks crop growth, yields, and agronomy advice.
  */
 export const FarmProduction = () => {
+  const navigate = useNavigate();
   // 3. MULTIPLE STATES: 
   //    - 'selectedSeason' tracks which year we are looking at.
   //    - 'selectedProduction' tracks which crop record is clicked for details.
@@ -47,7 +50,7 @@ export const FarmProduction = () => {
       moisture: '12.5%'
     };
     setProductionItems([newRecord, ...productionItems]);
-    alert(`${type} record has been added to your farm history.`);
+    toast.success(`${type} record added to your farm history.`);
   };
 
   const handleExportReport = () => {
@@ -306,12 +309,12 @@ export const FarmProduction = () => {
                     <div className="space-y-4">
                       <div className="flex justify-between items-end">
                         <p className="text-xs font-black uppercase tracking-widest text-primary">Growth Progress</p>
-                        <p className="text-2xl font-black text-primary">65%</p>
+                        <p className="text-2xl font-black text-primary">{selectedProduction.progress || 65}%</p>
                       </div>
                       <div className="h-4 bg-black/5 rounded-full overflow-hidden p-1">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: '65%' }}
+                          animate={{ width: `${selectedProduction.progress || 65}%` }}
                           className="h-full bg-primary rounded-full shadow-sm"
                         />
                       </div>
@@ -369,7 +372,9 @@ export const FarmProduction = () => {
                       </div>
                       <div className="bg-surface-container-low p-4 rounded-3xl text-center">
                         <p className="text-[8px] font-black text-neutral-400 uppercase tracking-widest mb-1">Performance</p>
-                        <p className="text-lg font-black text-success">+12%</p>
+                        <p className="text-lg font-black text-success">
+                          {productionItems.length > 1 ? `+${Math.round((productionItems[0].yield / productionItems[1].yield - 1) * 100)}%` : 'N/A'}
+                        </p>
                       </div>
                     </div>
 
@@ -377,23 +382,23 @@ export const FarmProduction = () => {
                     <div className="p-8 bg-surface-container-low rounded-[2.5rem] border border-black/5 relative overflow-hidden">
                       <h4 className="text-lg font-bold mb-4 relative z-10 text-neutral-900">Yield Benchmarking</h4>
                       <div className="space-y-4 relative z-10">
-                        {[
-                          { year: '2025', val: 100, active: true },
-                          { year: '2024', val: 82 },
-                          { year: '2023', val: 65 },
-                        ].map(bar => (
-                          <div key={bar.year} className="flex items-center gap-4">
-                            <span className="text-[10px] font-black text-neutral-400 w-8">{bar.year}</span>
-                            <div className="flex-1 h-3 bg-black/5 rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${bar.val}%` }}
-                                className={cn("h-full rounded-full transition-all", bar.active ? "bg-primary" : "bg-neutral-300")}
-                              />
+                        {productionItems.filter(p => p.crop === selectedProduction.crop).slice(0, 3).map((bar, idx) => {
+                          const maxYield = Math.max(...productionItems.filter(p => p.crop === selectedProduction.crop).map(p => p.yield));
+                          const percentage = (bar.yield / maxYield) * 100;
+                          return (
+                            <div key={bar.id} className="flex items-center gap-4">
+                              <span className="text-[10px] font-black text-neutral-400 w-8">{bar.season.split('-')[0]}</span>
+                              <div className="flex-1 h-3 bg-black/5 rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${percentage}%` }}
+                                  className={cn("h-full rounded-full transition-all", idx === 0 ? "bg-primary" : "bg-neutral-300")}
+                                />
+                              </div>
+                              <span className="text-[10px] font-black text-neutral-900 w-12 text-right">{bar.yield.toLocaleString()} KG</span>
                             </div>
-                            <span className="text-[10px] font-black text-neutral-900 w-12 text-right">{bar.val * 62.5} KG</span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                       {/* Background watermark icon */}
                       <div className="absolute top-0 right-0 p-8 text-neutral-100 -mr-16 -mt-16">
@@ -403,7 +408,7 @@ export const FarmProduction = () => {
 
                     <div className="flex gap-4">
                       <button 
-                        onClick={() => alert('Detailed logistical logs are only available for confirmed grain deliveries.')}
+                        onClick={() => { setSelectedProduction(null); navigate('/deliveries'); toast.info('Showing deliveries for this crop.'); }}
                         className="flex-1 bg-surface-container-low hover:bg-black/5 py-4 rounded-2xl font-bold text-xs transition-colors flex items-center justify-center gap-2"
                       >
                         Logistical Data <ChevronRight size={16} />

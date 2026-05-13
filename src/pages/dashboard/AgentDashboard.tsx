@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Package, Users, Clock, History, Scale, Receipt, ChevronRight, ArrowRight, Loader2 } from 'lucide-react';
 import GrainRecording from './components/GrainRecording';
 import { APP_CONFIG, LOGIC_CONSTANTS, MOCK_DEFAULTS } from '@/src/constants';
+import { toast } from 'sonner';
 
 import { User } from '@/src/types';
 
@@ -12,6 +13,7 @@ interface AgentDashboardProps {
 
 export const AgentDashboard = ({ user }: AgentDashboardProps) => {
   const navigate = useNavigate();
+  const { data: intakeData } = useApi(api.fetchDailyIntake);
   const [showRecording, setShowRecording] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -19,9 +21,14 @@ export const AgentDashboard = ({ user }: AgentDashboardProps) => {
     setIsSyncing(true);
     setTimeout(() => {
       setIsSyncing(false);
-      alert('Local data successfully synchronized with ministry servers.');
+      toast.success('Data synced with ministry servers.');
     }, LOGIC_CONSTANTS.SYNC_TIMEOUT);
   };
+
+  const pendingQueue = [
+    { name: MOCK_DEFAULTS.FARMER_NAME, nrc: MOCK_DEFAULTS.FARMER_NRC, weight: '420kg', crop: MOCK_DEFAULTS.CROP_MAIZE },
+    { name: 'Bwalya Mwewa', nrc: '110928/65/1', weight: '1,250kg', crop: MOCK_DEFAULTS.CROP_SOYBEANS },
+  ];
 
   if (showRecording) {
     return <GrainRecording onBack={() => setShowRecording(false)} />;
@@ -58,13 +65,17 @@ export const AgentDashboard = ({ user }: AgentDashboardProps) => {
         <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-black/5">
           <Package size={24} className="text-primary mb-4" />
           <p className="text-[10px] font-bold uppercase text-neutral-500">Today's Grain Intake</p>
-          <p className="text-4xl font-black font-headline">142 <span className="text-lg font-medium text-neutral-400">Bags</span></p>
+          <p className="text-4xl font-black font-headline">
+            {intakeData?.bags || '...'} <span className="text-lg font-medium text-neutral-400">Bags</span>
+          </p>
         </div>
         <div className="bg-primary-container p-6 rounded-3xl shadow-xl shadow-primary/10 text-white">
           <Users size={24} className="mb-4 opacity-80" />
           <p className="text-[10px] font-bold uppercase opacity-80">Pending Verifications</p>
           <div className="flex justify-between items-end">
-            <p className="text-4xl font-black font-headline">08</p>
+            <p className="text-4xl font-black font-headline">
+              {pendingQueue.length < 10 ? `0${pendingQueue.length}` : pendingQueue.length}
+            </p>
             <button 
               onClick={() => navigate('/registration')}
               className="bg-white/20 p-2 rounded-xl hover:bg-white/30 transition-all"
@@ -81,7 +92,7 @@ export const AgentDashboard = ({ user }: AgentDashboardProps) => {
           {[
             { icon: Users, label: 'Verify Farmer', onClick: () => navigate('/registration') },
             { icon: Scale, label: 'Record Grain', onClick: () => setShowRecording(true) },
-            { icon: Receipt, label: 'Generate PRN', onClick: () => alert('PRN Generation Service is currently being initialized...') },
+            { icon: Receipt, label: 'Generate PRN', onClick: () => setShowRecording(true) },
           ].map((item) => (
             <button
               key={item.label}

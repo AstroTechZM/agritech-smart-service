@@ -9,6 +9,13 @@ import { WalletProvider } from '@/src/context/WalletContext';
 import { FarmerProvider } from '@/src/context/FarmerContext';
 
 export const App = () => {
+  // Apply dark mode from localStorage on first load
+  useEffect(() => {
+    if (localStorage.getItem('agritech_dark_mode') === 'true') {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
   // Authentication State
   const [user, setUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('agritech_user_v2');
@@ -39,12 +46,17 @@ export const App = () => {
     setUser(mockUser);
   };
 
+  const handleProfileSave = (updates: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...updates } : prev);
+  };
+
   // Create router instance with necessary props
   const router = createAppRouter({
     user,
     onLogin: (u) => setUser(u),
     onLogout: handleLogout,
     onRoleChange: handleRoleChange,
+    onProfileSave: handleProfileSave,
   });
 
   return (

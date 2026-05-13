@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserRole } from '@/src/types';
+import { User, UserRole } from '@/src/types';
 import FarmerDashboard from './FarmerDashboard';
 import AgroDealerDashboard from './AgroDealerDashboard';
 import AgentDashboard from './AgentDashboard';

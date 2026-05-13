@@ -6,13 +6,14 @@
  *    - If you want to return two things (like a <div> and a Modal), you wrap them in 
  *      an empty tag called a "Fragment." It's like an invisible container.
  */
-import React, { useState, useEffect } from 'react';
-import { Truck, Navigation, AlertTriangle, CheckCircle2, User as UserIcon, Map as MapIcon, Loader2 } from 'lucide-react'; // Icons
-import { motion, AnimatePresence } from 'motion/react'; // Animation tools
-import { cn } from '@/src/lib/utils'; // Styling helper
-import { UserRole } from '@/src/types'; // User roles
+import React, { useState } from 'react';
+import { Truck, Navigation, AlertTriangle, CheckCircle2, User as UserIcon, Map as MapIcon, Loader2, X, Radio } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '@/src/lib/utils';
+import { UserRole } from '@/src/types';
 import { api } from '@/src/services/api';
 import { useApi } from '@/src/hooks/useApi';
+import { toast } from 'sonner';
 
 interface LogisticsProps {
   role: UserRole;
@@ -25,6 +26,7 @@ export const Logistics = ({ role }: LogisticsProps) => {
   const assignedDepot = 'Kasama Hub'; 
 
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
+  const [showTrackingPanel, setShowTrackingPanel] = useState(false);
   const { data: shipments, isLoading, setData: setShipments } = useApi(api.fetchShipments);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -61,7 +63,7 @@ export const Logistics = ({ role }: LogisticsProps) => {
           </div>
           {!isClerk && (
             <button 
-              onClick={() => alert("Opening Live Fleet Tracking interface...")}
+              onClick={() => setShowTrackingPanel(true)}
               className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-primary/10 transition-colors text-primary"
             >
               <Navigation size={16} /> Live Tracking
@@ -134,8 +136,11 @@ export const Logistics = ({ role }: LogisticsProps) => {
                   </div>
                   <button 
                     onClick={() => {
-                      if(searchQuery) alert(`Connecting to GPS relay for: ${searchQuery}...`);
-                      else alert('Please enter a tracking ID or vehicle plate first.');
+                      if (filteredShipments.length > 0) {
+                        toast.success(`Found ${filteredShipments.length} match(es) for "${searchQuery || 'all vehicles'}".`);
+                      } else {
+                        toast.error('No vehicles found matching that ID or plate.');
+                      }
                     }}
                     className="w-full bg-primary hover:bg-primary/90 text-white p-4 rounded-2xl font-bold transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group mt-4"
                   >
@@ -268,6 +273,83 @@ export const Logistics = ({ role }: LogisticsProps) => {
                     </div>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Live Fleet Tracking Panel */}
+      <AnimatePresence>
+        {showTrackingPanel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowTrackingPanel(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.97 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-2xl bg-surface-container-lowest rounded-[3rem] shadow-2xl ring-1 ring-black/5 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-primary p-6 flex justify-between items-center">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-1">Fleet Operations</p>
+                  <h3 className="text-2xl font-black font-headline text-white">Live Fleet Tracker</h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full">
+                    <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
+                    <span className="text-[10px] font-bold text-white uppercase">Simulated Feed</span>
+                  </div>
+                  <button onClick={() => setShowTrackingPanel(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors">
+                    <X size={18} className="text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Fleet List */}
+              <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
+                {(shipments || []).map((s: any) => (
+                  <div key={s.id} className="bg-surface-container-low p-4 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center",
+                        s.status === 'IN TRANSIT' ? 'bg-primary/10 text-primary' :
+                        s.status === 'DELAYED' ? 'bg-error/10 text-error' : 'bg-neutral-100 text-neutral-400'
+                      )}>
+                        <Truck size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm">{s.vehicle}</p>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase">{s.from} → {s.to}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <Radio size={12} className={cn(
+                          s.status === 'IN TRANSIT' ? 'text-primary animate-pulse' :
+                          s.status === 'DELAYED' ? 'text-error' : 'text-neutral-400'
+                        )} />
+                        <span className={cn(
+                          "text-[9px] font-black uppercase tracking-widest",
+                          s.status === 'IN TRANSIT' ? 'text-primary' :
+                          s.status === 'DELAYED' ? 'text-error' : 'text-neutral-400'
+                        )}>{s.status}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-neutral-400">ETA: {s.eta}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-4 border-t border-black/5 text-center">
+                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">GPS relay data is simulated — real coordinates require IoT integration</p>
               </div>
             </motion.div>
           </motion.div>

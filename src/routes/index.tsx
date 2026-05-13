@@ -38,9 +38,10 @@ interface RouterProps {
   onLogin: (user: User) => void;
   onLogout: () => void;
   onRoleChange: (role: UserRole) => void;
+  onProfileSave: (updates: Partial<User>) => void;
 }
 
-export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange }: RouterProps) => {
+export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange, onProfileSave }: RouterProps) => {
   return createHashRouter([
     {
       path: '/login',
@@ -83,7 +84,7 @@ export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange }: Route
             },
             {
               path: 'profile',
-              element: <Profile user={user!} onLogout={onLogout} />,
+              element: <Profile user={user!} onLogout={onLogout} onSave={onProfileSave} />,
             },
             {
               path: 'settings',
@@ -104,7 +105,7 @@ export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange }: Route
               ]
             },
             {
-                element: <ProtectedRoute user={user} allowedRoles={[UserRole.ADMIN, UserRole.AGENT, UserRole.OFFICER]} />,
+                element: <ProtectedRoute user={user} allowedRoles={[UserRole.ADMIN, UserRole.AGENT]} />,
                 children: [
                   {
                     path: 'payments',

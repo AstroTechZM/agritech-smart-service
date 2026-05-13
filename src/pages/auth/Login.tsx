@@ -51,7 +51,8 @@ export const Login = ({ onLogin }: LoginProps) => {
         role: UserRole.FARMER,
         nrc: farmer.nrc,
         district: farmer.district,
-        email: `${farmer.firstName.toLowerCase()}@example.zm`
+        email: `${farmer.firstName.toLowerCase()}@example.zm`,
+        avatar: `https://picsum.photos/seed/${farmer.nrc}/200`,
       });
       toast.success(`Welcome back, ${farmer.firstName}!`);
       setIsLoading(false);

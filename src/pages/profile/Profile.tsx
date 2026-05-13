@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import { User } from '@/src/types';
-import { User as UserIcon, Mail, Phone, MapPin, Shield, Edit3, LogOut } from 'lucide-react';
+import { UserRole } from '@/src/types';
+import { User as UserIcon, Mail, Phone, MapPin, Shield, Edit3, LogOut, Lock, X, Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ProfileProps {
   user: User;
   onLogout: () => void;
+  onSave: (updates: Partial<User>) => void;
 }
 
-export const Profile = ({ user, onLogout }: ProfileProps) => {
+export const Profile = ({ user, onLogout, onSave }: ProfileProps) => {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
     name: user.name,
@@ -16,9 +22,15 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
     nrc: user.nrc || ''
   });
 
+  // Change Password Modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
+  const [showPw, setShowPw] = useState({ current: false, newPass: false, confirm: false });
+
   const handleSave = () => {
+    onSave({ name: profileData.name, email: profileData.email });
     setIsEditing(false);
-    alert('Profile changes have been saved successfully.');
+    toast.success('Profile updated successfully.');
   };
 
   const handleCancel = () => {
@@ -29,6 +41,25 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
       nrc: user.nrc || ''
     });
     setIsEditing(false);
+  };
+
+  const handleChangePassword = () => {
+    if (!passwords.current) {
+      toast.error('Please enter your current password.');
+      return;
+    }
+    if (passwords.newPass.length < 8) {
+      toast.error('New password must be at least 8 characters.');
+      return;
+    }
+    if (passwords.newPass !== passwords.confirm) {
+      toast.error('New passwords do not match.');
+      return;
+    }
+    // Simulated success
+    setShowPasswordModal(false);
+    setPasswords({ current: '', newPass: '', confirm: '' });
+    toast.success('Password changed successfully.');
   };
 
   return (
@@ -143,10 +174,10 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
                 )}
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-bold uppercase text-neutral-400">Physical Address</label>
+                <label className="text-[10px] font-bold uppercase text-neutral-400">District / Region</label>
                 <div className="p-4 bg-surface-container-low rounded-2xl text-sm font-medium flex items-center gap-2">
                   <MapPin size={16} className="text-neutral-400" />
-                  Zambia (Region info pending)
+                  {user.district || 'Zambia'}
                 </div>
               </div>
             </div>
@@ -158,13 +189,19 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mt-6">
               <div className="flex gap-4">
                 <button 
-                  onClick={() => alert('Password reset link has been sent to your registered email.')}
-                  className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-primary shadow-sm hover:shadow-md transition-all"
+                  onClick={() => setShowPasswordModal(true)}
+                  className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-primary shadow-sm hover:shadow-md transition-all flex items-center gap-2"
                 >
-                  Change Password
+                  <Lock size={14} /> Change Password
                 </button>
                 <button 
-                  onClick={() => alert('Redirecting to security provider for Two-Factor setup...')}
+                  onClick={() => {
+                    if (user.role === UserRole.FARMER) {
+                      toast.info('Two-Factor Authentication will be available in a future update.');
+                    } else {
+                      navigate('/security');
+                    }
+                  }}
                   className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-neutral-700 shadow-sm hover:shadow-md transition-all"
                 >
                   Two-Factor Auth
@@ -180,6 +217,75 @@ export const Profile = ({ user, onLogout }: ProfileProps) => {
           </div>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            onClick={() => setShowPasswordModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-surface-container-lowest p-8 rounded-[3rem] w-full max-w-sm shadow-2xl border border-black/5"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Security</span>
+                  <h3 className="text-2xl font-black font-headline">Change Password</h3>
+                </div>
+                <button onClick={() => setShowPasswordModal(false)} className="p-2 hover:bg-black/5 rounded-full">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {(['current', 'newPass', 'confirm'] as const).map((field) => {
+                  const labels: Record<string, string> = {
+                    current: 'Current Password',
+                    newPass: 'New Password',
+                    confirm: 'Confirm New Password'
+                  };
+                  return (
+                    <div key={field} className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase text-neutral-400">{labels[field]}</label>
+                      <div className="relative">
+                        <input
+                          type={showPw[field] ? 'text' : 'password'}
+                          value={passwords[field]}
+                          onChange={(e) => setPasswords({ ...passwords, [field]: e.target.value })}
+                          placeholder="••••••••"
+                          className="w-full p-4 pr-12 bg-surface-container-low border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPw({ ...showPw, [field]: !showPw[field] })}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400"
+                        >
+                          {showPw[field] ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <button
+                  onClick={handleChangePassword}
+                  className="w-full mt-2 bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+                >
+                  Update Password
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

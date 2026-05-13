@@ -19,22 +19,70 @@
   
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;
+
+  --color-success: #1a7a1a;
 }
 
 @layer base {
   body {
-    @apply bg-surface text-[#191c1a] font-sans antialiased;
+    @apply bg-surface text-[#191c1a] font-sans antialiased transition-colors duration-300;
   }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
   }
+
+  /* ── Dark Mode Token Overrides ───────────────────────── */
+  :root.dark {
+    --color-surface: #0f1410;
+    --color-surface-container-low: #171d16;
+    --color-surface-container-lowest: #1e251d;
+    --color-surface-container-high: #263025;
+    --color-primary: #5dd85d;
+    --color-primary-container: #3cb03c;
+    --color-tertiary: #f0be6d;
+    --color-tertiary-fixed-dim: #b38a40;
+    --color-error: #ff7b7b;
+    --color-error-container: #5a1010;
+  }
+
+  :root.dark body {
+    @apply text-[#dde8da];
+  }
+
+  /* Neutrals in dark mode */
+  :root.dark .text-neutral-900 { color: #e8f0e5 !important; }
+  :root.dark .text-neutral-700 { color: #c4d4c1 !important; }
+  :root.dark .text-neutral-600 { color: #a8bba5 !important; }
+  :root.dark .text-neutral-500 { color: #8a9e87 !important; }
+  :root.dark .text-neutral-400 { color: #6e8269 !important; }
+
+  /* Border and background overrides */
+  :root.dark .border-black\/5 { border-color: rgba(255,255,255,0.06) !important; }
+  :root.dark .bg-black\/5 { background-color: rgba(255,255,255,0.05) !important; }
+  :root.dark .bg-neutral-200 { background-color: #2a3429 !important; }
+  :root.dark .bg-white { background-color: #1e251d !important; }
+  :root.dark .text-\[\#191c1a\] { color: #dde8da !important; }
+
+  /* Fixed white panel areas */
+  :root.dark .bg-surface-container-lowest { background-color: #1e251d !important; }
+  :root.dark .bg-surface-container-low { background-color: #171d16 !important; }
+  :root.dark .bg-surface-container-high { background-color: #263025 !important; }
+  :root.dark .bg-surface { background-color: #0f1410 !important; }
 }
 
 .glass-panel {
-  @apply backdrop-blur-xl bg-white/80 dark:bg-emerald-950/80;
+  @apply backdrop-blur-xl bg-white/80;
+}
+
+:root.dark .glass-panel {
+  @apply bg-emerald-950/90;
 }
 
 .primary-gradient {
   background: linear-gradient(135deg, #006e00 0%, #008a00 100%);
+}
+
+:root.dark .primary-gradient {
+  background: linear-gradient(135deg, #2d6b2d 0%, #3cb03c 100%);
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
+import { toast } from 'sonner';
 import { Shield, AlertTriangle } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
@@ -38,7 +39,7 @@ export const Security = () => {
 
   const handleInvestigate = (id: number) => {
     setAnomalies(anomalies.filter(a => a.id !== id));
-    alert('Security anomaly has been flagged for manual investigation and temporarily suppressed.');
+    toast.success('Anomaly flagged for manual investigation.');
   };
 
   return (

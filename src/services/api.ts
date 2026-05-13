@@ -39,5 +39,25 @@ export const api = {
     const newFarmer = { ...farmerData, id: `FARMER-${Date.now()}` };
     REGISTERED_FARMERS.push(newFarmer);
     return newFarmer;
+  },
+
+  // REDEMPTIONS (Agro-Dealer)
+  fetchRedemptions: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
+    return [
+      { id: 'RED-101', farmer: 'Mutale Phiri', items: '8 Bags D-Compound', time: '10m ago', amount: 4800 },
+      { id: 'RED-102', farmer: 'Sarah Banda', items: '2 Packs Maize Seed', time: '1h ago', amount: 1200 },
+      { id: 'RED-103', farmer: 'John Lungu', items: '4 Bags Urea', time: '3h ago', amount: 2400 },
+    ];
+  },
+
+  // ANALYTICS (Daily Intake)
+  fetchDailyIntake: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
+    return {
+      bags: 142,
+      tonnage: 7.1,
+      pendingVerifications: 8
+    };
   }
 };

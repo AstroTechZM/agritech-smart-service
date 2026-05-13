@@ -6,13 +6,13 @@
  *    so we don't have to build everything from scratch.
  */
 import React, { useState } from 'react';
-import { Package, Download, Plus, MoreVertical, X, Trash2, Loader2 } from 'lucide-react'; // Icons for the UI
+import { Package, Download, Plus, X, Trash2, Loader2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-import { cn } from '@/src/lib/utils'; // A utility to combine CSS class names easily
-import { UserRole } from '@/src/types'; // Information about the type of user (Admin, Dealer, etc.)
+import { cn } from '@/src/lib/utils';
+import { UserRole } from '@/src/types';
 import { api } from '@/src/services/api';
 import { useApi } from '@/src/hooks/useApi';
+import { toast } from 'sonner';
 
 /**
  * 2. INTERFACE (TypeScript):
@@ -38,6 +38,7 @@ export const Stock = ({ role }: StockProps) => {
   const { data: stockItems, isLoading, setData: setStockItems } = useApi(api.fetchStock);
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showRestockModal, setShowRestockModal] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
   const [newItemUnit, setNewItemUnit] = useState('Bags');
@@ -219,7 +220,7 @@ export const Stock = ({ role }: StockProps) => {
             </div>
             
             <button 
-              onClick={() => alert("Restock request has been sent successfully!")}
+              onClick={() => setShowRestockModal(true)}
               className="w-full mt-8 bg-white text-primary py-3 rounded-2xl font-bold text-sm hover:bg-opacity-90 transition-all shadow-lg shadow-white/20"
             >
               Request Restock
@@ -304,9 +305,81 @@ export const Stock = ({ role }: StockProps) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* RESTOCK REQUEST MODAL */}
+      <AnimatePresence>
+        {showRestockModal && stockItems && (() => {
+          const lowItems = stockItems.filter(i => i.status === 'LOW');
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+              onClick={() => setShowRestockModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-surface-container-lowest p-8 rounded-[3rem] w-full max-w-md shadow-2xl relative border border-black/5"
+              >
+                <button
+                  onClick={() => setShowRestockModal(false)}
+                  className="absolute top-6 right-6 p-2 text-neutral-400 hover:bg-black/5 rounded-full"
+                >
+                  <X size={20} />
+                </button>
+
+                <div className="mb-6">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-error mb-1 block">Inventory Alert</span>
+                  <h3 className="text-3xl font-black font-headline text-neutral-900">Request Restock</h3>
+                  <p className="text-sm text-neutral-500 mt-1">
+                    {lowItems.length > 0
+                      ? `${lowItems.length} item(s) are LOW. Confirm to request resupply.`
+                      : 'All items are sufficiently stocked.'}
+                  </p>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  {lowItems.length > 0 ? lowItems.map(item => (
+                    <div key={item.name} className="flex justify-between items-center p-4 bg-error/5 border border-error/10 rounded-2xl">
+                      <div>
+                        <p className="font-bold text-sm">{item.name}</p>
+                        <p className="text-[10px] text-neutral-400 font-bold">Current: {item.qty} {item.unit}</p>
+                      </div>
+                      <span className="px-2 py-1 bg-error/10 text-error text-[9px] font-black rounded uppercase">LOW</span>
+                    </div>
+                  )) : (
+                    <div className="py-8 text-center text-neutral-400">
+                      <Package size={40} className="mx-auto mb-3 opacity-30" />
+                      <p className="font-bold text-sm">No low-stock items found</p>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  disabled={lowItems.length === 0}
+                  onClick={() => {
+                    if (!stockItems) return;
+                    setStockItems(stockItems.map(i =>
+                      i.status === 'LOW' ? { ...i, status: 'PENDING RESTOCK' } : i
+                    ));
+                    setShowRestockModal(false);
+                    toast.success(`Restock request submitted for ${lowItems.length} item(s).`);
+                  }}
+                  className="w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-primary/20 disabled:opacity-40"
+                >
+                  <RefreshCw size={18} /> Confirm Restock Request
+                </button>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 };
 
-// 8. EXPORT: This makes the component available to be used in other files.
 export default Stock;
