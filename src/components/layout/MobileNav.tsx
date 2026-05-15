@@ -12,7 +12,7 @@ interface MobileNavProps {
 export const MobileNav = ({ role, onMenuToggle }: MobileNavProps) => {
   const navConfig: Record<UserRole, any[]> = {
     [UserRole.FARMER]: [
-      { id: 'deliveries', icon: History, label: 'Deliveries', path: '/deliveries' },
+      { id: 'overview', icon: Home, label: 'Home', path: '/dashboard' },
       { id: 'production', icon: Sprout, label: 'Farm', path: '/production' },
       { id: 'menu', icon: Menu, label: 'Menu' },
     ],

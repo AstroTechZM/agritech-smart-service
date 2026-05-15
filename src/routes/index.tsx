@@ -1,20 +1,29 @@
 import React from 'react';
 import { createHashRouter, Navigate, Outlet } from 'react-router-dom';
 import AppShell from '@/src/components/layout/AppShell';
-import Login from '@/src/pages/auth/Login';
-import Dashboard from '@/src/pages/dashboard/Dashboard';
-import Vouchers from '@/src/pages/vouchers/Vouchers';
-import Deliveries from '@/src/pages/deliveries/Deliveries';
-import Stock from '@/src/pages/stock/Stock';
-import Logistics from '@/src/pages/logistics/Logistics';
-import Registration from '@/src/pages/registration/Registration';
-import Payments from '@/src/pages/payments/Payments';
-import Security from '@/src/pages/security/Security';
-import FarmProduction from '@/src/pages/production/FarmProduction';
-import Wallet from '@/src/pages/wallet/Wallet';
-import Profile from '@/src/pages/profile/Profile';
-import Settings from '@/src/pages/settings/Settings';
-import RedemptionPortal from '@/src/pages/vouchers/RedemptionPortal';
+
+// Shared Pages
+import Login from '@/src/pages/shared/auth/Login';
+import Dashboard from '@/src/pages/shared/dashboard/Dashboard';
+import Profile from '@/src/pages/shared/profile/Profile';
+import Settings from '@/src/pages/shared/settings/Settings';
+import Security from '@/src/pages/shared/security/Security';
+
+// Farmer Pages
+import Vouchers from '@/src/pages/farmer/vouchers/Vouchers';
+import Deliveries from '@/src/pages/farmer/deliveries/Deliveries';
+import FarmProduction from '@/src/pages/farmer/production/FarmProduction';
+import Wallet from '@/src/pages/farmer/wallet/Wallet';
+
+// Agent / Field Officer Pages
+import Registration from '@/src/pages/agent/registration/Registration';
+import RedemptionPortal from '@/src/pages/agent/redemption/RedemptionPortal';
+import Stock from '@/src/pages/agent/stock/Stock';
+
+// Admin Pages
+import Payments from '@/src/pages/admin/payments/Payments';
+import Logistics from '@/src/pages/admin/logistics/Logistics';
+
 import { User, UserRole } from '@/src/types';
 
 interface ProtectedRouteProps {
@@ -110,7 +119,7 @@ export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange, onProfi
               ]
             },
             {
-                element: <ProtectedRoute user={user} allowedRoles={[UserRole.ADMIN, UserRole.AGENT]} />,
+                element: <ProtectedRoute user={user} allowedRoles={[UserRole.ADMIN, UserRole.AGENT, UserRole.AGRO_DEALER]} />,
                 children: [
                   {
                     path: 'payments',

@@ -12,7 +12,8 @@ import redemptionsData from './redemptions.json';
 import dailyIntakeData from './dailyIntake.json';
 import adminStatsData from './adminStats.json';
 
-export const MOCK_USERS: Record<UserRole, User> = usersData as unknown as Record<UserRole, User>;
+export const MOCK_USERS: Record<UserRole, User> = { ...(usersData as unknown as Record<UserRole, User>) };
+export const MOCK_USER: User = { ...MOCK_USERS[UserRole.FARMER] };
 
 // Store newly registered farmers during the session
 export const REGISTERED_FARMERS: any[] = [
@@ -21,26 +22,24 @@ export const REGISTERED_FARMERS: any[] = [
   { nrc: '482910/11/1', first_name: 'John', last_name: 'Lungu', gender: 'Male' }
 ];
 
-export const MOCK_USER: User = MOCK_USERS[UserRole.FARMER];
+export const MOCK_DELIVERIES = [...deliveriesData];
 
-export const MOCK_DELIVERIES = deliveriesData;
+export const MOCK_SHIPMENTS = [...shipmentsData];
 
-export const MOCK_SHIPMENTS = shipmentsData;
+export const MOCK_FARM_PRODUCTION: FarmProduction[] = [...(productionData as FarmProduction[])];
 
-export const MOCK_FARM_PRODUCTION: FarmProduction[] = productionData as FarmProduction[];
+export const MOCK_AGRONOMY_INSIGHTS: AgronomyInsight[] = [...(insightsData as AgronomyInsight[])];
 
-export const MOCK_AGRONOMY_INSIGHTS: AgronomyInsight[] = insightsData as AgronomyInsight[];
+export const MOCK_TRANSACTIONS: Transaction[] = [...(transactionsData as Transaction[])];
 
-export const MOCK_TRANSACTIONS: Transaction[] = transactionsData as Transaction[];
+export const MOCK_VOUCHERS = [...vouchersData];
 
-export const MOCK_VOUCHERS = vouchersData;
+export const MOCK_PAYMENTS = [...paymentsData];
 
-export const MOCK_PAYMENTS = paymentsData;
+export const MOCK_STOCK = [...stockData];
 
-export const MOCK_STOCK = stockData;
+export const MOCK_REDEMPTIONS = [...redemptionsData];
 
-export const MOCK_REDEMPTIONS = redemptionsData;
+export const MOCK_DAILY_INTAKE = { ...dailyIntakeData };
 
-export const MOCK_DAILY_INTAKE = dailyIntakeData;
-
-export const MOCK_ADMIN_STATS = adminStatsData;
+export const MOCK_ADMIN_STATS = { ...adminStatsData };

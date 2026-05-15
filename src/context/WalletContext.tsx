@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Transaction } from '@/src/types';
-import { api } from '@/src/services/api';
+import { api } from '@/src/services';
 import { LOGIC_CONSTANTS } from '@/src/constants';
 
 interface WalletContextType {
@@ -17,44 +17,36 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchWalletData = async () => {
-      try {
-        setIsLoading(true);
-        const [bal, txs] = await Promise.all([
-          api.fetchWalletBalance(),
-          api.fetchWalletTransactions()
-        ]);
-        setBalance(bal);
-        setTransactions(txs);
-      } catch (error) {
-        console.error('Failed to fetch wallet data', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchWalletData = async () => {
+    try {
+      setIsLoading(true);
+      const [bal, txs] = await Promise.all([
+        api.fetchWalletBalance(),
+        api.fetchWalletTransactions()
+      ]);
+      setBalance(bal);
+      setTransactions(txs);
+    } catch (error) {
+      console.error('Failed to fetch wallet data', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchWalletData();
   }, []);
 
   const addTransaction = async (tx: Omit<Transaction, 'id' | 'date' | 'status'>) => {
-    const newTx: Transaction = {
-      ...tx,
-      id: `TX-${Math.floor(LOGIC_CONSTANTS.TX_ID_MIN + Math.random() * LOGIC_CONSTANTS.TX_ID_MAX)}`,
-      date: new Date().toLocaleString(),
-      status: 'PENDING',
-    };
-    
-    // Simulate backend processing delay for adding transaction
-    await new Promise(resolve => setTimeout(resolve, LOGIC_CONSTANTS.API_DELAY_SHORT));
-    
     if (tx.type === 'WITHDRAWAL') {
-      setBalance((prev) => prev - tx.amount);
-    } else if (tx.type === 'PAYOUT' || tx.type === 'DEPOSIT') {
-      setBalance((prev) => prev + tx.amount);
+      await api.postWithdrawal(tx.amount);
+    } else {
+      // For other types, simulate an API call if needed, or just let the refresh handle it
+      await new Promise(resolve => setTimeout(resolve, LOGIC_CONSTANTS.API_DELAY_SHORT));
     }
-
-    setTransactions((prev) => [newTx, ...prev]);
+    
+    // Always refresh from the central source of truth (the API/Mock state)
+    await fetchWalletData();
   };
 
   return (
