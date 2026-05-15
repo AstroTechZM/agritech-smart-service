@@ -20,8 +20,11 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
-import { MOCK_FARM_PRODUCTION, MOCK_AGRONOMY_INSIGHTS } from '@/src/data/mockData';
+import { useApi } from '@/src/hooks/useApi';
+import { api } from '@/src/services/api';
 import { useNavigate } from 'react-router-dom';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 import { toast } from 'sonner';
 
 /**
@@ -35,7 +38,15 @@ export const FarmProduction = () => {
   //    - 'selectedProduction' tracks which crop record is clicked for details.
   const [selectedSeason, setSelectedSeason] = useState('2025-2026');
   const [selectedProduction, setSelectedProduction] = useState<any>(null);
-  const [productionItems, setProductionItems] = useState(MOCK_FARM_PRODUCTION);
+  
+  const { data: insightsData, isLoading: isLoadingInsights } = useApi(api.fetchInsights);
+  const { data: productionData, isLoading: isLoadingProduction } = useApi(api.fetchFarmProduction);
+  
+  const [productionItems, setProductionItems] = useState<any[]>([]);
+  
+  React.useEffect(() => {
+    if (productionData) setProductionItems(productionData);
+  }, [productionData]);
 
   const handleLogActivity = (type: 'Harvest' | 'Activity') => {
     const newRecord = {
@@ -118,35 +129,52 @@ export const FarmProduction = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {MOCK_AGRONOMY_INSIGHTS.map((insight) => (
-                <div
-                  key={insight.id}
-                  className={cn(
-                    "p-6 rounded-[2rem] border transition-all hover:shadow-md",
-                    // Conditional styling based on priority
-                    insight.priority === 'HIGH' ? "bg-primary/5 border-primary/10" : "bg-surface-container-low border-black/5"
-                  )}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <span className={cn(
-                      "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
-                      insight.priority === 'HIGH' ? "bg-primary text-white" : "bg-neutral-200 text-neutral-500"
-                    )}>
-                      {insight.priority} Priority
-                    </span>
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase">{insight.category}</span>
+              {isLoadingInsights ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={`skel-ins-${i}`} className="p-6 rounded-[2rem] border bg-surface-container-low border-black/5">
+                    <div className="flex justify-between items-start mb-4">
+                      <Skeleton width="4rem" height="1rem" borderRadius="1rem" />
+                      <Skeleton width="5rem" height="1rem" />
+                    </div>
+                    <Skeleton width="80%" height="1.25rem" className="mb-2 block" />
+                    <Skeleton count={2} className="mb-4" />
+                    <div className="flex gap-2">
+                      <Skeleton width="3rem" height="1rem" borderRadius="0.5rem" />
+                      <Skeleton width="4rem" height="1rem" borderRadius="0.5rem" />
+                    </div>
                   </div>
-                  <h4 className="font-bold text-lg mb-2 leading-tight">{insight.title}</h4>
-                  <p className="text-xs text-neutral-600 font-medium leading-relaxed mb-4">{insight.content}</p>
+                ))
+              ) : (
+                (insightsData || []).map((insight) => (
+                  <div
+                    key={insight.id}
+                    className={cn(
+                      "p-6 rounded-[2rem] border transition-all hover:shadow-md",
+                      // Conditional styling based on priority
+                      insight.priority === 'HIGH' ? "bg-primary/5 border-primary/10" : "bg-surface-container-low border-black/5"
+                    )}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
+                        insight.priority === 'HIGH' ? "bg-primary text-white" : "bg-neutral-200 text-neutral-500"
+                      )}>
+                        {insight.priority} Priority
+                      </span>
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase">{insight.category}</span>
+                    </div>
+                    <h4 className="font-bold text-lg mb-2 leading-tight">{insight.title}</h4>
+                    <p className="text-xs text-neutral-600 font-medium leading-relaxed mb-4">{insight.content}</p>
 
-                  {/* NESTED MAPPING: Looping through 'tags' inside each 'insight' */}
-                  <div className="flex flex-wrap gap-2">
-                    {insight.tags.map(tag => (
-                      <span key={tag} className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-lg">#{tag}</span>
-                    ))}
+                    {/* NESTED MAPPING: Looping through 'tags' inside each 'insight' */}
+                    <div className="flex flex-wrap gap-2">
+                      {insight.tags.map(tag => (
+                        <span key={tag} className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-lg">#{tag}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -205,7 +233,34 @@ export const FarmProduction = () => {
                * 4. FILTERED LIST: 
                *    We only show records that match the 'selectedSeason'.
                */}
-              {productionItems.filter(p => p.season === selectedSeason).length > 0 ? (
+              {isLoadingProduction ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={`skel-prod-${i}`} className="flex flex-col md:flex-row md:items-center justify-between p-6 bg-surface-container-low rounded-[2rem] border border-black/5">
+                    <div className="flex items-center gap-6">
+                      <Skeleton width="3.5rem" height="3.5rem" borderRadius="1rem" />
+                      <div>
+                        <div className="flex gap-2 mb-1">
+                          <Skeleton width="4rem" height="1rem" />
+                          <Skeleton width="3rem" height="1rem" borderRadius="0.25rem" />
+                        </div>
+                        <Skeleton width="6rem" height="1.25rem" className="mb-1 block" />
+                        <Skeleton width="8rem" height="1rem" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-12 mt-4 md:mt-0">
+                      <div className="text-right">
+                        <Skeleton width="5rem" height="0.75rem" className="mb-1 block" />
+                        <Skeleton width="6rem" height="1.25rem" />
+                      </div>
+                      <div className="text-right min-w-[100px]">
+                        <Skeleton width="4rem" height="0.75rem" className="mb-1 block" />
+                        <Skeleton width="5rem" height="1.5rem" />
+                      </div>
+                      <Skeleton width="2.5rem" height="2.5rem" borderRadius="9999px" />
+                    </div>
+                  </div>
+                ))
+              ) : productionItems.filter(p => p.season === selectedSeason).length > 0 ? (
                 productionItems.filter(p => p.season === selectedSeason).map((record) => (
                   <div
                     key={record.id}

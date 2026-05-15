@@ -11,7 +11,8 @@ import {
   EyeOff,
   Wallet,
   User as UserIcon,
-  Sprout
+  Sprout,
+  QrCode
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
@@ -29,6 +30,7 @@ export const Sidebar = ({ role, isOpen, onClose, onLogout }: SidebarProps) => {
   const allMenuItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/dashboard' },
     { id: 'vouchers', label: 'Vouchers', icon: Ticket, path: '/vouchers' },
+    { id: 'redemption', label: 'Redemption', icon: QrCode, path: '/redemption' },
     { id: 'deliveries', label: 'Deliveries', icon: History, path: '/deliveries' },
     { id: 'stock', label: 'Stock', icon: Package, path: '/stock' },
     { id: 'registration', label: 'Registration', icon: Users, path: '/registration' },
@@ -41,9 +43,9 @@ export const Sidebar = ({ role, isOpen, onClose, onLogout }: SidebarProps) => {
 
   const MENU_PERMISSIONS: Record<UserRole, string[]> = {
     [UserRole.FARMER]: ['overview', 'vouchers', 'deliveries', 'production', 'wallet'],
-    [UserRole.AGRO_DEALER]: ['overview', 'vouchers', 'stock'],
-    [UserRole.AGENT]: ['overview', 'stock', 'logistics', 'registration'],
-    [UserRole.ADMIN]: ['overview', 'vouchers', 'stock', 'registration', 'logistics', 'payments', 'security'],
+    [UserRole.AGRO_DEALER]: ['overview', 'redemption', 'stock'],
+    [UserRole.AGENT]: ['overview', 'redemption', 'stock', 'logistics', 'registration'],
+    [UserRole.ADMIN]: ['overview', 'vouchers', 'redemption', 'stock', 'registration', 'logistics', 'payments', 'security'],
   };
 
   const menuItems = allMenuItems.filter(item => MENU_PERMISSIONS[role].includes(item.id));

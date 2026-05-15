@@ -4,6 +4,10 @@ import { Package, Users, Clock, History, Scale, Receipt, ChevronRight, ArrowRigh
 import GrainRecording from './components/GrainRecording';
 import { APP_CONFIG, LOGIC_CONSTANTS, MOCK_DEFAULTS } from '@/src/constants';
 import { toast } from 'sonner';
+import { useApi } from '@/src/hooks/useApi';
+import { api } from '@/src/services/api';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 
 import { User } from '@/src/types';
 
@@ -13,7 +17,7 @@ interface AgentDashboardProps {
 
 export const AgentDashboard = ({ user }: AgentDashboardProps) => {
   const navigate = useNavigate();
-  const { data: intakeData } = useApi(api.fetchDailyIntake);
+  const { data: intakeData, isLoading } = useApi(api.fetchDailyIntake);
   const [showRecording, setShowRecording] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -65,9 +69,13 @@ export const AgentDashboard = ({ user }: AgentDashboardProps) => {
         <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-black/5">
           <Package size={24} className="text-primary mb-4" />
           <p className="text-[10px] font-bold uppercase text-neutral-500">Today's Grain Intake</p>
-          <p className="text-4xl font-black font-headline">
-            {intakeData?.bags || '...'} <span className="text-lg font-medium text-neutral-400">Bags</span>
-          </p>
+          {isLoading ? (
+            <Skeleton width="8rem" height="2.5rem" className="mt-1 block" />
+          ) : (
+            <p className="text-4xl font-black font-headline mt-1">
+              {intakeData?.bags || '0'} <span className="text-lg font-medium text-neutral-400">Bags</span>
+            </p>
+          )}
         </div>
         <div className="bg-primary-container p-6 rounded-3xl shadow-xl shadow-primary/10 text-white">
           <Users size={24} className="mb-4 opacity-80" />

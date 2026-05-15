@@ -7,6 +7,8 @@ import { useApi } from '@/src/hooks/useApi';
 import { api } from '@/src/services/api';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 
 interface AgroDealerDashboardProps {
   user: User | null;
@@ -16,8 +18,8 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redemptionStep, setRedemptionStep] = useState<'SCAN' | 'CONFIRM' | 'SUCCESS'>('SCAN');
   
-  const { data: stockItems } = useApi(api.fetchStock);
-  const { data: redemptions, setData: setRedemptions } = useApi(api.fetchRedemptions);
+  const { data: stockItems, isLoading: isLoadingStock } = useApi(api.fetchStock);
+  const { data: redemptions, setData: setRedemptions, isLoading: isLoadingRedemptions } = useApi(api.fetchRedemptions);
 
   const totalRedemptions = (redemptions || []).length;
   const pendingClaims = (redemptions || []).reduce((sum, r) => sum + r.amount, 0);
@@ -60,22 +62,30 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: 'Total Redemptions', value: totalRedemptions, trend: '+4%', icon: CheckCircle2 },
-          { label: 'Pending Claims', value: `ZMW ${pendingClaims.toLocaleString()}`, trend: 'Processing', icon: Wallet },
-          { label: 'Stock Alerts', value: `${lowStockCount} Low`, trend: lowStockCount > 0 ? 'Action Needed' : 'Healthy', icon: AlertTriangle },
+          { label: 'Total Redemptions', value: totalRedemptions, trend: '+4%', icon: CheckCircle2, isLoading: isLoadingRedemptions },
+          { label: 'Pending Claims', value: `ZMW ${pendingClaims.toLocaleString()}`, trend: 'Processing', icon: Wallet, isLoading: isLoadingRedemptions },
+          { label: 'Stock Alerts', value: `${lowStockCount} Low`, trend: lowStockCount > 0 ? 'Action Needed' : 'Healthy', icon: AlertTriangle, isLoading: isLoadingStock },
         ].map((stat) => (
           <div key={stat.label} className="bg-surface-container-lowest p-6 rounded-3xl border border-black/5 shadow-sm">
             <div className="flex justify-between items-start mb-4">
               <div className="p-3 bg-primary/10 rounded-2xl text-primary">
                 <stat.icon size={24} />
               </div>
-              <span className={cn(
-                "text-xs font-bold px-2 py-1 rounded-full",
-                stat.trend === 'Action Needed' ? "bg-error/10 text-error" : "bg-primary/5 text-primary"
-              )}>{stat.trend}</span>
+              {stat.isLoading ? (
+                <div className="h-6 w-20"><Skeleton height="100%" borderRadius="1rem" /></div>
+              ) : (
+                <span className={cn(
+                  "text-xs font-bold px-2 py-1 rounded-full",
+                  stat.trend === 'Action Needed' ? "bg-error/10 text-error" : "bg-primary/5 text-primary"
+                )}>{stat.trend}</span>
+              )}
             </div>
             <p className="text-xs font-bold uppercase text-neutral-500">{stat.label}</p>
-            <h3 className="text-3xl font-black font-headline mt-1">{stat.value}</h3>
+            {stat.isLoading ? (
+              <div className="h-10 w-24 mt-1"><Skeleton height="100%" /></div>
+            ) : (
+              <h3 className="text-3xl font-black font-headline mt-1">{stat.value}</h3>
+            )}
           </div>
         ))}
       </div>
@@ -96,20 +106,30 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/5">
-                {(stockItems || []).map((item) => (
-                  <tr key={item.name}>
-                    <td className="px-6 py-4 font-bold text-sm">{item.name}</td>
-                    <td className="px-6 py-4 text-xs font-medium">{item.qty} {item.unit}</td>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded text-[9px] font-black uppercase",
-                        item.status === 'STABLE' ? "bg-tertiary/10 text-tertiary" : "bg-error/10 text-error"
-                      )}>
-                        {item.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {isLoadingStock ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <tr key={`skel-stock-${i}`}>
+                      <td className="px-6 py-4"><Skeleton width="8rem" height="1.25rem" /></td>
+                      <td className="px-6 py-4"><Skeleton width="4rem" height="1.25rem" /></td>
+                      <td className="px-6 py-4"><Skeleton width="4rem" height="1.25rem" /></td>
+                    </tr>
+                  ))
+                ) : (
+                  (stockItems || []).map((item) => (
+                    <tr key={item.name}>
+                      <td className="px-6 py-4 font-bold text-sm">{item.name}</td>
+                      <td className="px-6 py-4 text-xs font-medium">{item.qty} {item.unit}</td>
+                      <td className="px-6 py-4">
+                        <span className={cn(
+                          "px-2 py-1 rounded text-[9px] font-black uppercase",
+                          item.status === 'STABLE' ? "bg-tertiary/10 text-tertiary" : "bg-error/10 text-error"
+                        )}>
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -121,15 +141,27 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
             <button className="text-xs font-bold text-primary">View All</button>
           </div>
           <div className="space-y-3">
-            {(redemptions || []).map((r) => (
-              <div key={r.id} className="bg-surface-container-low p-4 rounded-2xl flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-sm">{r.farmer}</p>
-                  <p className="text-xs text-neutral-400">{r.items}</p>
+            {isLoadingRedemptions ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={`skel-red-${i}`} className="bg-surface-container-low p-4 rounded-2xl flex justify-between items-center">
+                  <div className="space-y-2">
+                    <Skeleton width="8rem" height="1.25rem" />
+                    <Skeleton width="6rem" height="1rem" />
+                  </div>
+                  <Skeleton width="4rem" height="1rem" />
                 </div>
-                <p className="text-xs font-bold text-neutral-400">{r.time}</p>
-              </div>
-            ))}
+              ))
+            ) : (
+              (redemptions || []).map((r) => (
+                <div key={r.id} className="bg-surface-container-low p-4 rounded-2xl flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-sm">{r.farmer}</p>
+                    <p className="text-xs text-neutral-400">{r.items}</p>
+                  </div>
+                  <p className="text-xs font-bold text-neutral-400">{r.time}</p>
+                </div>
+              ))
+            )}
           </div>
         </section>
       </div>

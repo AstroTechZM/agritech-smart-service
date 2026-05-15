@@ -1,4 +1,8 @@
-import { MOCK_SHIPMENTS, REGISTERED_FARMERS } from '../data/mockData';
+import { 
+  MOCK_SHIPMENTS, REGISTERED_FARMERS, MOCK_DELIVERIES, MOCK_AGRONOMY_INSIGHTS, 
+  MOCK_VOUCHERS, MOCK_TRANSACTIONS, MOCK_FARM_PRODUCTION, MOCK_PAYMENTS, MOCK_STOCK, 
+  MOCK_REDEMPTIONS, MOCK_DAILY_INTAKE, MOCK_ADMIN_STATS 
+} from '../data/mockData';
 import { LOGIC_CONSTANTS } from '../constants';
 
 // Simulated delay to mimic network latency
@@ -14,23 +18,13 @@ export const api = {
   // PAYMENTS (Simulated store since it's not in mockData.ts yet)
   fetchPayments: async () => {
     await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
-    return [
-      { name: 'Loveness Phiri', nrc: '482910/11/1', qty: 12, amount: 3360, method: 'MoMo', status: 'APPROVED', district: 'Lusaka' },
-      { name: 'Kelvin Banda', nrc: '110928/65/1', qty: 25, amount: 7000, method: 'Bank', status: 'PENDING', district: 'Choma' },
-      { name: 'Mutale Kapwepwe', nrc: '338102/52/1', qty: 8, amount: 2240, method: 'MoMo', status: 'CANCELLED', district: 'Lusaka' },
-      { name: 'John Doe', nrc: '123456/78/1', qty: 15, amount: 4200, method: 'Bank', status: 'PENDING', district: 'Kasama' },
-    ];
+    return MOCK_PAYMENTS;
   },
 
   // STOCK
   fetchStock: async () => {
     await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
-    return [
-      { name: 'D-Compound Fertilizer', qty: 450, unit: 'Bags', status: 'STABLE' },
-      { name: 'Urea Fertilizer', qty: 120, unit: 'Bags', status: 'LOW' },
-      { name: 'Maize Seed (10kg)', qty: 85, unit: 'Packs', status: 'STABLE' },
-      { name: 'Soybean Seed (25kg)', qty: 12, unit: 'Packs', status: 'LOW' },
-    ];
+    return MOCK_STOCK;
   },
 
   // REGISTRATION
@@ -44,20 +38,92 @@ export const api = {
   // REDEMPTIONS (Agro-Dealer)
   fetchRedemptions: async () => {
     await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
-    return [
-      { id: 'RED-101', farmer: 'Mutale Phiri', items: '8 Bags D-Compound', time: '10m ago', amount: 4800 },
-      { id: 'RED-102', farmer: 'Sarah Banda', items: '2 Packs Maize Seed', time: '1h ago', amount: 1200 },
-      { id: 'RED-103', farmer: 'John Lungu', items: '4 Bags Urea', time: '3h ago', amount: 2400 },
-    ];
+    return MOCK_REDEMPTIONS;
+  },
+
+  redeemVoucher: async (pin: string) => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_MEDIUM);
+    // Simulation: Find voucher with this PIN
+    const voucher = MOCK_VOUCHERS.find(v => v.pin === pin || v.id === pin);
+    if (!voucher) {
+      throw new Error("Invalid Voucher PIN or ID");
+    }
+    if (voucher.status === 'REDEEMED') {
+      throw new Error("This voucher has already been redeemed");
+    }
+    
+    // Mark as redeemed in mock data (simulated)
+    voucher.status = 'REDEEMED';
+    
+    const redemption = {
+      id: `RED-${Date.now()}`,
+      farmer: "Selected Farmer", // In real app, we'd look this up
+      item: voucher.type,
+      amount: "8 Bags",
+      date: new Date().toLocaleDateString(),
+      status: 'COMPLETED'
+    };
+    
+    MOCK_REDEMPTIONS.unshift(redemption);
+    return { success: true, redemption };
   },
 
   // ANALYTICS (Daily Intake)
   fetchDailyIntake: async () => {
     await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
-    return {
-      bags: 142,
-      tonnage: 7.1,
-      pendingVerifications: 8
-    };
+    return MOCK_DAILY_INTAKE;
+  },
+
+  // DELIVERIES
+  fetchDeliveries: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
+    return MOCK_DELIVERIES;
+  },
+
+  // PRODUCTION
+  fetchFarmProduction: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
+    return MOCK_FARM_PRODUCTION;
+  },
+
+  // INSIGHTS
+  fetchInsights: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
+    return MOCK_AGRONOMY_INSIGHTS;
+  },
+
+  // VOUCHERS
+  fetchVouchers: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
+    return MOCK_VOUCHERS;
+  },
+
+  // WALLET
+  fetchWalletBalance: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
+    return LOGIC_CONSTANTS.INITIAL_WALLET_BALANCE;
+  },
+  
+  fetchWalletTransactions: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
+    return MOCK_TRANSACTIONS;
+  },
+
+  // FARMERS
+  fetchFarmers: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
+    return REGISTERED_FARMERS;
+  },
+
+  // PROFILE
+  updateProfile: async (profileData: any) => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_MEDIUM);
+    return { success: true, data: profileData };
+  },
+
+  // ADMIN STATS
+  fetchAdminStats: async () => {
+    await delay(LOGIC_CONSTANTS.API_DELAY_MEDIUM);
+    return MOCK_ADMIN_STATS;
   }
 };

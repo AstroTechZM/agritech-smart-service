@@ -4,6 +4,7 @@ import { UserRole } from '@/src/types';
 import { User as UserIcon, Mail, Phone, MapPin, Shield, Edit3, LogOut, Lock, X, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { api } from '@/src/services/api';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ProfileProps {
@@ -24,13 +25,34 @@ export const Profile = ({ user, onLogout, onSave }: ProfileProps) => {
 
   // Change Password Modal state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [securityPrefs, setSecurityPrefs] = useState({
+    twoFactor: false,
+    emailAlerts: true,
+    loginNotifications: true
+  });
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
   const [showPw, setShowPw] = useState({ current: false, newPass: false, confirm: false });
 
-  const handleSave = () => {
-    onSave({ name: profileData.name, email: profileData.email });
-    setIsEditing(false);
-    toast.success('Profile updated successfully.');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await api.updateProfile(profileData);
+      onSave({ 
+        name: profileData.name, 
+        email: profileData.email,
+        nrc: profileData.nrc,
+        cell_num: profileData.phone.startsWith('0') ? profileData.phone.substring(1) : profileData.phone
+      });
+      setIsEditing(false);
+      toast.success('Profile updated successfully.');
+    } catch (error) {
+      toast.error('Failed to update profile.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -86,9 +108,13 @@ export const Profile = ({ user, onLogout, onSave }: ProfileProps) => {
             </button>
             <button 
               onClick={handleSave}
-              className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all font-headline"
+              disabled={isSaving}
+              className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary/90 disabled:opacity-50 transition-all font-headline"
             >
-              Save Changes
+              {isSaving ? (
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : null}
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}
@@ -195,16 +221,10 @@ export const Profile = ({ user, onLogout, onSave }: ProfileProps) => {
                   <Lock size={14} /> Change Password
                 </button>
                 <button 
-                  onClick={() => {
-                    if (user.role === UserRole.FARMER) {
-                      toast.info('Two-Factor Authentication will be available in a future update.');
-                    } else {
-                      navigate('/security');
-                    }
-                  }}
+                  onClick={() => setShowSecurityModal(true)}
                   className="bg-white px-6 py-3 rounded-xl font-bold text-xs text-neutral-700 shadow-sm hover:shadow-md transition-all"
                 >
-                  Two-Factor Auth
+                  Security Settings
                 </button>
               </div>
               <button 
@@ -286,7 +306,88 @@ export const Profile = ({ user, onLogout, onSave }: ProfileProps) => {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Security Settings Modal */}
+      <AnimatePresence>
+        {showSecurityModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            onClick={() => setShowSecurityModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-surface-container-lowest p-8 rounded-[3rem] w-full max-w-md shadow-2xl border border-black/5"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Account</span>
+                  <h3 className="text-2xl font-black font-headline">Security Preferences</h3>
+                </div>
+                <button onClick={() => setShowSecurityModal(false)} className="p-2 hover:bg-black/5 rounded-full">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
+                  <div>
+                    <p className="font-bold text-sm">Two-Factor Authentication</p>
+                    <p className="text-[10px] text-neutral-400 font-bold uppercase">Via SMS or App</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setSecurityPrefs({...securityPrefs, twoFactor: !securityPrefs.twoFactor});
+                      toast.success(`2FA ${!securityPrefs.twoFactor ? 'enabled' : 'disabled'}`);
+                    }}
+                    className={cn(
+                      "w-10 h-6 rounded-full transition-colors relative",
+                      securityPrefs.twoFactor ? "bg-primary" : "bg-neutral-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-4 h-4 bg-white rounded-full absolute top-1 transition-all",
+                      securityPrefs.twoFactor ? "left-5" : "left-1"
+                    )} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
+                  <div>
+                    <p className="font-bold text-sm">Email Security Alerts</p>
+                    <p className="text-[10px] text-neutral-400 font-bold uppercase">Login & Transfer Alerts</p>
+                  </div>
+                  <button 
+                    onClick={() => setSecurityPrefs({...securityPrefs, emailAlerts: !securityPrefs.emailAlerts})}
+                    className={cn(
+                      "w-10 h-6 rounded-full transition-colors relative",
+                      securityPrefs.emailAlerts ? "bg-primary" : "bg-neutral-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-4 h-4 bg-white rounded-full absolute top-1 transition-all",
+                      securityPrefs.emailAlerts ? "left-5" : "left-1"
+                    )} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setShowSecurityModal(false)}
+                  className="w-full bg-neutral-900 text-white py-4 rounded-2xl font-bold shadow-lg"
+                >
+                  Save Preferences
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+
   );
 };
 

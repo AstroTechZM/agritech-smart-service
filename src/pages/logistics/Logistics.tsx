@@ -1,19 +1,15 @@
-/**
- * REACT BEGINNER'S GUIDE:
- * 
- * 1. FRAGMENTS (<> ... </>):
- *    - In React, a component can only return ONE top-level element.
- *    - If you want to return two things (like a <div> and a Modal), you wrap them in 
- *      an empty tag called a "Fragment." It's like an invisible container.
- */
 import React, { useState } from 'react';
-import { Truck, Navigation, AlertTriangle, CheckCircle2, User as UserIcon, Map as MapIcon, Loader2, X, Radio } from 'lucide-react';
+import { Truck, Navigation, AlertTriangle, CheckCircle2, User as UserIcon, Map as MapIcon, X, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { UserRole } from '@/src/types';
 import { api } from '@/src/services/api';
 import { useApi } from '@/src/hooks/useApi';
 import { toast } from 'sonner';
+import PageHeader from '@/src/components/ui/PageHeader';
+import Badge from '@/src/components/ui/Badge';
+import Skeleton from 'react-loading-skeleton';
+import LiveTrackingPanel from '@/src/components/logistics/LiveTrackingPanel';
 
 interface LogisticsProps {
   role: UserRole;
@@ -27,6 +23,8 @@ export const Logistics = ({ role }: LogisticsProps) => {
 
   const [selectedShipment, setSelectedShipment] = useState<any>(null);
   const [showTrackingPanel, setShowTrackingPanel] = useState(false);
+  const [showReasonModal, setShowReasonModal] = useState(false);
+  const [delayReason, setDelayReason] = useState('');
   const { data: shipments, isLoading, setData: setShipments } = useApi(api.fetchShipments);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -35,33 +33,21 @@ export const Logistics = ({ role }: LogisticsProps) => {
     s.vehicle.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const updateShipmentStatus = (id: string, newStatus: string) => {
+  const updateShipmentStatus = (id: string, newStatus: string, reason?: string) => {
     if (!shipments) return;
-    setShipments(shipments.map(s => s.id === id ? { ...s, status: newStatus } : s));
-    setSelectedShipment(null); // Close modal after action
+    setShipments(shipments.map(s => s.id === id ? { ...s, status: newStatus, reason: reason || s.reason } : s));
+    setSelectedShipment(null);
+    setShowReasonModal(false);
+    setDelayReason('');
   };
-
-  if (isLoading) {
-    return (
-      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-12 h-12 text-primary animate-spin" />
-        <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest">Loading Logistics Data...</p>
-      </div>
-    );
-  }
 
   return (
     <>
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="flex justify-between items-end">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Supply Chain</span>
-            <h2 className="text-3xl font-black font-headline tracking-tight">
-              {/* CONDITIONAL TEXT: Changes based on who is looking at the page */}
-              {isFarmer ? 'My Deliverables' : 'Logistics & Fleet'}
-            </h2>
-          </div>
-          {!isClerk && (
+        <PageHeader 
+          title={isFarmer ? 'My Deliverables' : 'Logistics & Fleet'}
+          category="Supply Chain"
+          actions={!isClerk && (
             <button 
               onClick={() => setShowTrackingPanel(true)}
               className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-primary/10 transition-colors text-primary"
@@ -69,16 +55,29 @@ export const Logistics = ({ role }: LogisticsProps) => {
               <Navigation size={16} /> Live Tracking
             </button>
           )}
-        </div>
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* LEFT COLUMN: List of shipments */}
           <div className="lg:col-span-8 space-y-6">
-            {filteredShipments.length > 0 ? (
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={`skel-ship-${i}`} className="bg-surface-container-lowest p-6 rounded-[2rem] border border-black/5 shadow-sm flex flex-col md:flex-row md:items-center gap-6">
+                  <Skeleton width="4rem" height="4rem" borderRadius="1rem" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton width="40%" height="1.2rem" />
+                    <Skeleton width="60%" height="1.5rem" />
+                    <Skeleton width="30%" height="1rem" />
+                  </div>
+                  <div className="text-right flex flex-col items-end">
+                    <Skeleton width="4rem" height="1rem" className="mb-2 block" />
+                    <Skeleton width="3rem" height="1.5rem" />
+                  </div>
+                </div>
+              ))
+            ) : filteredShipments.length > 0 ? (
               filteredShipments.map((shipment) => (
                 <div
                   key={shipment.id}
-                  // When clicked, we "select" this shipment to show its details in the modal
                   onClick={() => setSelectedShipment(shipment)}
                   className="bg-surface-container-lowest p-6 rounded-[2rem] border border-black/5 shadow-sm flex flex-col md:flex-row md:items-center gap-6 cursor-pointer hover:border-primary/30 transition-all hover:shadow-md group"
                 >
@@ -88,15 +87,13 @@ export const Logistics = ({ role }: LogisticsProps) => {
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-black text-primary uppercase tracking-widest">{shipment.id}</span>
-                      <span className={cn(
-                        "px-2 py-0.5 rounded text-[8px] font-bold uppercase",
-                        shipment.status === 'IN TRANSIT' ? "bg-tertiary/10 text-tertiary" :
-                          shipment.status === 'LOADING' ? "bg-primary/10 text-primary" : 
-                            shipment.status === 'DELAYED' ? "bg-error/10 text-error" :
-                              "bg-neutral-100 text-neutral-400"
-                      )}>
+                      <Badge variant={
+                        shipment.status === 'IN TRANSIT' ? 'tertiary' :
+                        shipment.status === 'LOADING' ? 'primary' : 
+                        shipment.status === 'DELAYED' ? 'error' : 'neutral'
+                      }>
                         {shipment.status}
-                      </span>
+                      </Badge>
                     </div>
                     <h4 className="font-bold text-lg">{shipment.cargo}</h4>
                     <div className="flex items-center gap-4 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
@@ -118,7 +115,6 @@ export const Logistics = ({ role }: LogisticsProps) => {
             )}
           </div>
 
-          {/* RIGHT COLUMN: Sidebar / Fleet Search */}
           <div className="lg:col-span-4">
             <div className="bg-surface-container-lowest p-8 rounded-[2.5rem] border border-black/5 shadow-sm sticky top-32">
               <h3 className="text-xl font-bold font-headline mb-6">Fleet Tracking</h3>
@@ -164,11 +160,6 @@ export const Logistics = ({ role }: LogisticsProps) => {
         </div>
       </div>
 
-      {/**
-       * 3. ANIMATE PRESENCE:
-       *    - This allows components to "animate out" when they are removed from the screen.
-       *    - Without this, the modal would just disappear instantly.
-       */}
       <AnimatePresence>
         {selectedShipment && (
           <motion.div
@@ -176,29 +167,21 @@ export const Logistics = ({ role }: LogisticsProps) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-            // Clicking the backdrop closes the modal
             onClick={() => setSelectedShipment(null)}
           >
             <motion.div
               initial={{ opacity: 0, y: 50, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              /**
-               * 4. STOP PROPAGATION:
-               *    - This is IMPORTANT! It prevents the click on the Modal Content from 
-               *      "bubbling up" to the backdrop. Without this, clicking inside the modal 
-               *      would accidentally close it.
-               */
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-lg bg-surface-container-lowest rounded-[3rem] shadow-2xl relative overflow-hidden ring-1 ring-black/5"
             >
-              {/* Modal Header */}
               <div className="bg-surface-container-low p-6 py-8 border-b border-black/5 text-center relative">
                 <button
                   onClick={() => setSelectedShipment(null)}
                   className="absolute top-6 right-6 w-8 h-8 flex items-center justify-center bg-black/5 hover:bg-black/10 rounded-full text-neutral-500 transition-colors"
                 >
-                  <span className="text-lg font-black leading-none mb-0.5">✕</span>
+                  <X size={16} />
                 </button>
 
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-2 block">
@@ -207,7 +190,6 @@ export const Logistics = ({ role }: LogisticsProps) => {
                 <h3 className="text-3xl font-black font-headline tracking-tight">{selectedShipment.id}</h3>
               </div>
 
-              {/* Modal Body */}
               <div className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-black/5 p-4 rounded-3xl">
@@ -242,24 +224,31 @@ export const Logistics = ({ role }: LogisticsProps) => {
 
                 <div className="flex justify-between items-center pt-4 pb-2 border-b border-black/5">
                   <span className="text-[11px] font-bold uppercase text-neutral-500">Current Status</span>
-                  <span className={cn(
-                    "px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border",
-                    selectedShipment.status === 'IN TRANSIT' ? "bg-tertiary text-white border-tertiary/20 shadow-tertiary/20" :
-                      selectedShipment.status === 'LOADING' ? "bg-white text-primary border-primary/20 animate-pulse shadow-primary/10" :
-                        selectedShipment.status === 'DELAYED' ? "bg-error text-white border-error/20 shadow-error/20" :
-                          "bg-primary text-white border-primary/20 shadow-primary/20"
-                  )}>
+                  <Badge 
+                    variant={
+                      selectedShipment.status === 'IN TRANSIT' ? 'tertiary' :
+                      selectedShipment.status === 'LOADING' ? 'primary' : 
+                      selectedShipment.status === 'DELAYED' ? 'error' : 'neutral'
+                    }
+                    className="px-4 py-2"
+                  >
                     {selectedShipment.status}
-                  </span>
+                  </Badge>
                 </div>
 
-                {/* Role-Based Actions: Only Clerks can confirm arrival at their depot */}
+                {selectedShipment.reason && (
+                  <div className="p-4 bg-error/5 border border-error/10 rounded-2xl animate-in slide-in-from-top-2 duration-300">
+                    <p className="text-[9px] font-black uppercase text-error mb-1">Reported Issue</p>
+                    <p className="text-xs font-bold text-neutral-700 italic">"{selectedShipment.reason}"</p>
+                  </div>
+                )}
+
                 {isClerk && selectedShipment.status === 'IN TRANSIT' && selectedShipment.to === assignedDepot && (
                   <div className="pt-2 space-y-3">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 text-center">Destination Actions</p>
                     <div className="flex gap-4">
                       <button 
-                        onClick={() => updateShipmentStatus(selectedShipment.id, 'DELAYED')}
+                        onClick={() => setShowReasonModal(true)}
                         className="flex-1 bg-error/10 hover:bg-error/20 text-error px-4 py-3.5 rounded-2xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
                       >
                         <AlertTriangle size={16} /> Flag Problem
@@ -279,77 +268,58 @@ export const Logistics = ({ role }: LogisticsProps) => {
         )}
       </AnimatePresence>
 
-      {/* Live Fleet Tracking Panel */}
+      <LiveTrackingPanel 
+        isOpen={showTrackingPanel} 
+        onClose={() => setShowTrackingPanel(false)} 
+        shipments={shipments || []} 
+      />
+
+      {/* DELAY REASON MODAL */}
       <AnimatePresence>
-        {showTrackingPanel && (
+        {showReasonModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowTrackingPanel(false)}
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            onClick={() => setShowReasonModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, y: 40, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.97 }}
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl bg-surface-container-lowest rounded-[3rem] shadow-2xl ring-1 ring-black/5 overflow-hidden"
+              className="bg-surface-container-lowest p-8 rounded-[3rem] w-full max-w-sm shadow-2xl relative border border-black/5"
             >
-              {/* Header */}
-              <div className="bg-primary p-6 flex justify-between items-center">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-1">Fleet Operations</p>
-                  <h3 className="text-2xl font-black font-headline text-white">Live Fleet Tracker</h3>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full">
-                    <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-                    <span className="text-[10px] font-bold text-white uppercase">Simulated Feed</span>
-                  </div>
-                  <button onClick={() => setShowTrackingPanel(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors">
-                    <X size={18} className="text-white" />
+              <div className="mb-6">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-error mb-1 block">Dispatch Alert</span>
+                <h3 className="text-2xl font-black font-headline">Report Problem</h3>
+                <p className="text-xs text-neutral-500 mt-1">Briefly explain the cause of the delay for shipment {selectedShipment?.id}.</p>
+              </div>
+
+              <div className="space-y-4">
+                <textarea
+                  value={delayReason}
+                  onChange={(e) => setDelayReason(e.target.value)}
+                  placeholder="e.g. Mechanical failure at Kitwe branch..."
+                  className="w-full bg-surface-container-low border-none rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-error/20 h-32 resize-none"
+                />
+                
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setShowReasonModal(false)}
+                    className="flex-1 bg-surface-container-low py-4 rounded-2xl font-bold text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    disabled={!delayReason}
+                    onClick={() => updateShipmentStatus(selectedShipment.id, 'DELAYED', delayReason)}
+                    className="flex-[2] bg-error text-white py-4 rounded-2xl font-bold text-xs shadow-lg shadow-error/20 disabled:opacity-50"
+                  >
+                    Report Delay
                   </button>
                 </div>
-              </div>
-
-              {/* Fleet List */}
-              <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
-                {(shipments || []).map((s: any) => (
-                  <div key={s.id} className="bg-surface-container-low p-4 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center",
-                        s.status === 'IN TRANSIT' ? 'bg-primary/10 text-primary' :
-                        s.status === 'DELAYED' ? 'bg-error/10 text-error' : 'bg-neutral-100 text-neutral-400'
-                      )}>
-                        <Truck size={20} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">{s.vehicle}</p>
-                        <p className="text-[10px] text-neutral-400 font-bold uppercase">{s.from} → {s.to}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1">
-                        <Radio size={12} className={cn(
-                          s.status === 'IN TRANSIT' ? 'text-primary animate-pulse' :
-                          s.status === 'DELAYED' ? 'text-error' : 'text-neutral-400'
-                        )} />
-                        <span className={cn(
-                          "text-[9px] font-black uppercase tracking-widest",
-                          s.status === 'IN TRANSIT' ? 'text-primary' :
-                          s.status === 'DELAYED' ? 'text-error' : 'text-neutral-400'
-                        )}>{s.status}</span>
-                      </div>
-                      <span className="text-[10px] font-bold text-neutral-400">ETA: {s.eta}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-4 border-t border-black/5 text-center">
-                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">GPS relay data is simulated — real coordinates require IoT integration</p>
               </div>
             </motion.div>
           </motion.div>
@@ -358,12 +328,5 @@ export const Logistics = ({ role }: LogisticsProps) => {
     </>
   );
 };
-
-// Helper Icon Component
-const ArrowRight = ({ size, className }: { size: number, className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M5 12h14M12 5l7 7-7 7" />
-  </svg>
-);
 
 export default Logistics;

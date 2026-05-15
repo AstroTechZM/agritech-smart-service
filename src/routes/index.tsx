@@ -14,6 +14,7 @@ import FarmProduction from '@/src/pages/production/FarmProduction';
 import Wallet from '@/src/pages/wallet/Wallet';
 import Profile from '@/src/pages/profile/Profile';
 import Settings from '@/src/pages/settings/Settings';
+import RedemptionPortal from '@/src/pages/vouchers/RedemptionPortal';
 import { User, UserRole } from '@/src/types';
 
 interface ProtectedRouteProps {
@@ -69,6 +70,10 @@ export const createAppRouter = ({ user, onLogin, onLogout, onRoleChange, onProfi
             {
               path: 'vouchers',
               element: <Vouchers role={user?.role || UserRole.FARMER} />,
+            },
+            {
+              path: 'redemption',
+              element: <RedemptionPortal />,
             },
             {
                 path: 'deliveries',

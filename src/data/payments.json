@@ -1,0 +1,6 @@
+[
+  { "name": "Loveness Phiri", "nrc": "482910/11/1", "qty": 12, "amount": 3360, "method": "MoMo", "status": "APPROVED", "district": "Lusaka" },
+  { "name": "Kelvin Banda", "nrc": "110928/65/1", "qty": 25, "amount": 7000, "method": "Bank", "status": "PENDING", "district": "Choma" },
+  { "name": "Mutale Kapwepwe", "nrc": "338102/52/1", "qty": 8, "amount": 2240, "method": "MoMo", "status": "CANCELLED", "district": "Lusaka" },
+  { "name": "John Doe", "nrc": "123456/78/1", "qty": 15, "amount": 4200, "method": "Bank", "status": "PENDING", "district": "Kasama" }
+]

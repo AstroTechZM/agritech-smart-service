@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { REGISTERED_FARMERS } from '@/src/data/mockData';
+import { api } from '@/src/services/api';
 
 interface Farmer {
   nrc: string;
@@ -15,43 +15,55 @@ interface Farmer {
 
 interface FarmerContextType {
   farmers: Farmer[];
-  addFarmer: (farmer: Farmer) => void;
+  isLoading: boolean;
+  addFarmer: (farmer: Farmer) => Promise<void>;
   findFarmerByNRC: (nrc: string) => Farmer | undefined;
 }
 
 const FarmerContext = createContext<FarmerContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'agritech_farmers_v2';
-
 export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [farmers, setFarmers] = useState<Farmer[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved !== null ? JSON.parse(saved) : REGISTERED_FARMERS.map(f => ({
-        nrc: f.nrc,
-        firstName: f.first_name,
-        lastName: f.last_name,
-        gender: f.gender || 'Unknown',
-        district: 'Choma',
-        camp: 'Central',
-        farmSize: '5.0',
-        crops: ['Maize']
-    }));
-  });
+  const [farmers, setFarmers] = useState<Farmer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(farmers));
-  }, [farmers]);
+    const fetchFarmers = async () => {
+      try {
+        setIsLoading(true);
+        const registeredFarmers = await api.fetchFarmers();
+        const mappedFarmers = registeredFarmers.map(f => ({
+          nrc: f.nrc,
+          firstName: f.first_name,
+          lastName: f.last_name,
+          gender: f.gender || 'Unknown',
+          district: 'Choma',
+          camp: 'Central',
+          farmSize: '5.0',
+          crops: ['Maize']
+        }));
+        setFarmers(mappedFarmers);
+      } catch (error) {
+        console.error('Failed to fetch farmers', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const addFarmer = (farmer: Farmer) => {
+    fetchFarmers();
+  }, []);
+
+  const addFarmer = async (farmer: Farmer) => {
+    await api.registerFarmer(farmer);
     setFarmers((prev) => [farmer, ...prev]);
   };
 
   const findFarmerByNRC = (nrc: string) => {
-    return farmers.find(f => f.nrc === nrc);
+    const normalizedNRC = nrc.trim();
+    return farmers.find(f => f.nrc === normalizedNRC);
   };
 
   return (
-    <FarmerContext.Provider value={{ farmers, addFarmer, findFarmerByNRC }}>
+    <FarmerContext.Provider value={{ farmers, isLoading, addFarmer, findFarmerByNRC }}>
       {children}
     </FarmerContext.Provider>
   );

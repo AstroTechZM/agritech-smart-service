@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Ticket, CheckCircle2, QrCode, Map as MapIcon, X, Navigation, Locate } from 'lucide-react';
+import React, { useState } from 'react';
+import { Ticket, QrCode, Map as MapIcon, X, Navigation, Locate } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { UserRole } from '@/src/types';
+import { useApi } from '@/src/hooks/useApi';
+import { api } from '@/src/services/api';
 import { toast } from 'sonner';
+import PageHeader from '@/src/components/ui/PageHeader';
+import Badge, { BadgeVariant } from '@/src/components/ui/Badge';
+import DataTable from '@/src/components/ui/DataTable';
 
 interface VouchersProps {
   role: UserRole;
@@ -16,6 +21,8 @@ export const Vouchers = ({ role }: VouchersProps) => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [userLocation, setUserLocation] = useState<{ x: number; y: number } | null>(null);
+
+  const { data: vouchers, isLoading } = useApi(api.fetchVouchers);
 
   // Simulated dealers data for the map
   const dealers = [
@@ -32,106 +39,119 @@ export const Vouchers = ({ role }: VouchersProps) => {
     }, 1500);
   };
 
+  const columns = [
+    { 
+      header: 'Voucher ID', 
+      accessor: 'id' as const,
+      className: 'font-bold text-sm'
+    },
+    { 
+      header: 'Input', 
+      accessor: (row: any) => row.type || 'N/A',
+      className: 'text-xs text-neutral-500 font-medium',
+      skeletonWidth: '10rem'
+    },
+    { 
+      header: 'Date', 
+      accessor: (row: any) => row.expiryDate || row.date || 'N/A',
+      className: 'text-xs text-neutral-500 font-medium',
+      skeletonWidth: '6rem'
+    },
+    { 
+      header: 'Status', 
+      accessor: (row: any) => {
+        const variant: BadgeVariant = 
+          row.status === 'ACTIVE' ? 'primary' :
+          row.status === 'REDEEMED' ? 'tertiary' : 'neutral';
+        return <Badge variant={variant}>{row.status}</Badge>;
+      },
+      skeletonWidth: '4rem'
+    }
+  ];
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-end">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-1 block">
-            {isAdmin ? 'System Oversight' : 'Voucher Management'}
-          </span>
-          <h2 className="text-3xl font-black font-headline tracking-tight">
-            {isAdmin ? 'Voucher Analytics' : 'FISP Eligibility & Vouchers'}
-          </h2>
-        </div>
-      </div>
+      <PageHeader 
+        title={isAdmin ? 'Voucher Analytics' : 'FISP Eligibility & Vouchers'}
+        category={isAdmin ? 'System Oversight' : 'Voucher Management'}
+      />
 
       {isFarmer && (
         <div className="bg-surface-container-lowest p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
-          <div className="bg-surface-container-low p-6 rounded-3xl border border-primary/10 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-neutral-500">Active Voucher</p>
-                  <h4 className="text-2xl font-black font-headline">D-Compound Fertilizer</h4>
-                </div>
-                <span className="px-3 py-1 bg-primary text-white text-[10px] font-bold uppercase rounded-full">Valid</span>
-              </div>
+          {isLoading ? (
+            <div className="h-64 bg-surface-container-low rounded-3xl animate-pulse" />
+          ) : vouchers && vouchers.length > 0 ? (() => {
+            const activeVoucher = vouchers.find(v => v.status === 'ACTIVE') || vouchers[0];
+            return (
+              <div className="bg-surface-container-low p-6 rounded-3xl border border-primary/10 relative overflow-hidden">
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-neutral-500">Active Voucher</p>
+                      <h4 className="text-2xl font-black font-headline">{activeVoucher.type || activeVoucher.input}</h4>
+                    </div>
+                    <Badge variant={activeVoucher.status === 'ACTIVE' ? 'primary' : 'tertiary'}>
+                      {activeVoucher.status === 'ACTIVE' ? 'Valid' : 'Redeemed'}
+                    </Badge>
+                  </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-neutral-400">PIN Code</p>
-                  <p className="text-lg font-mono font-black tracking-widest">••••••</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-neutral-400">Input Type</p>
-                  <p className="text-sm font-bold">Fertilizer</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-neutral-400">Amount</p>
-                  <p className="text-sm font-bold">8 Bags (400kg)</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase text-neutral-400">Expiry Date</p>
-                  <p className="text-sm font-bold">30 Nov 2026</p>
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-neutral-400">PIN Code</p>
+                      <p className="text-lg font-mono font-black tracking-widest">{activeVoucher.status === 'ACTIVE' ? activeVoucher.pin : '••••••'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-neutral-400">Input Type</p>
+                      <p className="text-sm font-bold">{activeVoucher.type || 'FISP Input'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-neutral-400">Voucher ID</p>
+                      <p className="text-sm font-bold">{activeVoucher.id}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-neutral-400">Expiry/Date</p>
+                      <p className="text-sm font-bold">{activeVoucher.expiryDate || activeVoucher.date}</p>
+                    </div>
+                  </div>
 
-              <div className="flex flex-col md:flex-row gap-4">
-                <button 
-                  onClick={() => setShowQRModal(true)}
-                  className="flex-1 bg-primary text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-primary/20 flex items-center justify-center gap-2"
-                >
-                  <QrCode size={20} /> Show Redemption QR
-                </button>
-                <button 
-                  onClick={() => setShowMapModal(true)}
-                  className="flex-1 bg-white border border-black/10 py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-black/5 transition-all"
-                >
-                  <MapIcon size={20} /> Find Nearest Agro-Dealer
-                </button>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <button 
+                      onClick={() => setShowQRModal(true)}
+                      disabled={activeVoucher.status !== 'ACTIVE'}
+                      className="flex-1 bg-primary text-white py-4 rounded-2xl font-bold text-sm shadow-xl shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <QrCode size={20} /> Show Redemption QR
+                    </button>
+                    <button 
+                      onClick={() => setShowMapModal(true)}
+                      className="flex-1 bg-white border border-black/10 py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-black/5 transition-all"
+                    >
+                      <MapIcon size={20} /> Find Nearest Agro-Dealer
+                    </button>
+                  </div>
+                </div>
+                <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
               </div>
+            );
+          })() : (
+            <div className="text-center py-12 bg-surface-container-low rounded-3xl border border-dashed border-neutral-300">
+               <Ticket size={48} className="mx-auto mb-4 text-neutral-300" />
+               <p className="font-bold text-neutral-500">No active vouchers found</p>
             </div>
-            <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-primary/5 rounded-full blur-3xl" />
-          </div>
+          )}
         </div>
       )}
 
       <div className="space-y-4">
         <h3 className="text-lg font-bold font-headline px-1">Voucher History</h3>
-        <div className="bg-surface-container-lowest rounded-[2.5rem] border border-black/5 shadow-sm overflow-hidden">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-surface-container-low/30">
-                <th className="px-8 py-4 text-xs font-bold uppercase text-neutral-400">Voucher ID</th>
-                <th className="px-8 py-4 text-xs font-bold uppercase text-neutral-400">Input</th>
-                <th className="px-8 py-4 text-xs font-bold uppercase text-neutral-400">Date</th>
-                <th className="px-8 py-4 text-xs font-bold uppercase text-neutral-400">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5">
-              {[
-                { id: 'V-9921', type: 'D-Compound Fertilizer', date: '12 Oct 2025', status: 'ACTIVE' },
-                { id: 'V-8810', type: 'Maize Seed (10kg)', date: '05 Sep 2025', status: 'REDEEMED' },
-                { id: 'V-7705', type: 'Urea Fertilizer', date: '20 Oct 2024', status: 'EXPIRED' },
-              ].map((v) => (
-                <tr key={v.id} className="hover:bg-primary/5 transition-colors">
-                  <td className="px-8 py-5 font-bold text-sm">{v.id}</td>
-                  <td className="px-8 py-5 text-xs text-neutral-500 font-medium">{v.type}</td>
-                  <td className="px-8 py-5 text-xs text-neutral-500 font-medium">{v.date}</td>
-                  <td className="px-8 py-5">
-                    <span className={cn(
-                      "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
-                      v.status === 'ACTIVE' ? "bg-primary/10 text-primary" :
-                        v.status === 'REDEEMED' ? "bg-tertiary/10 text-tertiary" : "bg-neutral-100 text-neutral-400"
-                    )}>
-                      {v.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable 
+          columns={columns}
+          data={vouchers || []}
+          isLoading={isLoading}
+          rowKey={(v) => v.id}
+          emptyMessage="No voucher history found."
+          skeletonRows={3}
+        />
       </div>
 
       {/* QR CODE MODAL */}

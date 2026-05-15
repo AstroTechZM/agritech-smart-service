@@ -9,7 +9,10 @@ import React, { useState } from 'react';
 import { Map as MapIcon, ChevronRight } from 'lucide-react'; // Icons
 import { motion, AnimatePresence } from 'motion/react'; // Animations
 import { cn } from '@/src/lib/utils'; // Styling helper
-import { MOCK_DELIVERIES } from '@/src/data/mockData'; // Mock data (simulated database)
+import { useApi } from '@/src/hooks/useApi';
+import { api } from '@/src/services/api';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 
 /**
  * 2. COMPONENT: Deliveries
@@ -19,8 +22,8 @@ export const Deliveries = () => {
   // 3. STATE: Tracks which delivery is currently "clicked" to show details.
   const [selectedDelivery, setSelectedDelivery] = useState<any>(null);
 
-  // 4. DATA: We pull our list of deliveries from a separate data file.
-  const deliveries = MOCK_DELIVERIES;
+  // 4. DATA: We pull our list of deliveries from a separate data file via an API simulation.
+  const { data: deliveries, isLoading } = useApi(api.fetchDeliveries);
 
   return (
     <>
@@ -36,8 +39,24 @@ export const Deliveries = () => {
 
         {/* 5. GRID SYSTEM: 1 column on mobile, 2 on tablets, 3 on large screens. */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {deliveries.map((del) => (
-            <div
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={`skel-del-${i}`} className="bg-surface-container-lowest p-6 rounded-[2rem] border border-black/5 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div className="flex-1 space-y-2">
+                  <Skeleton width="4rem" height="0.75rem" />
+                  <Skeleton width="8rem" height="1.5rem" />
+                  <Skeleton width="6rem" height="1rem" />
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Skeleton width="5rem" height="0.75rem" />
+                  <Skeleton width="6rem" height="1.5rem" />
+                  <Skeleton width="4rem" height="1.5rem" borderRadius="1rem" />
+                </div>
+              </div>
+            ))
+          ) : (
+            (deliveries || []).map((del) => (
+              <div
               key={del.id}
               onClick={() => setSelectedDelivery(del)}
               className="bg-surface-container-lowest p-6 rounded-[2rem] border border-black/5 cursor-pointer hover:border-primary/30 transition-all hover:shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-6 group"
@@ -75,7 +94,8 @@ export const Deliveries = () => {
                 <span className="sm:hidden text-[10px] text-primary font-bold">Details <ChevronRight size={12} className="inline -mt-0.5" /></span>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
 

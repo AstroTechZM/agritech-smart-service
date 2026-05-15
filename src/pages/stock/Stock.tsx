@@ -1,37 +1,20 @@
-/**
- * REACT BEGINNER'S GUIDE:
- * 
- * 1. IMPORTS: These are like "buying tools from a hardware store." 
- *    We bring in pieces of code from other files (like icons from 'lucide-react') 
- *    so we don't have to build everything from scratch.
- */
 import React, { useState } from 'react';
-import { Package, Download, Plus, X, Trash2, Loader2, RefreshCw } from 'lucide-react';
+import { Package, Download, Plus, X, Trash2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/src/lib/utils';
 import { UserRole } from '@/src/types';
 import { api } from '@/src/services/api';
 import { useApi } from '@/src/hooks/useApi';
 import { toast } from 'sonner';
+import PageHeader from '@/src/components/ui/PageHeader';
+import Badge, { BadgeVariant } from '@/src/components/ui/Badge';
+import DataTable from '@/src/components/ui/DataTable';
+import StockInsights from '@/src/components/stock/StockInsights';
 
-/**
- * 2. INTERFACE (TypeScript):
- *    This is like a "Recipe" or a "Contract." It tells React exactly what kind of 
- *    information this component expects to receive. Here, we expect a 'role'.
- */
 interface StockProps {
   role: UserRole;
 }
 
-/**
- * 3. THE COMPONENT (Stock):
- *    In React, a "Component" is a self-contained piece of the website. 
- *    Think of it like a "Lego block." This specific block handles the "Stock Management" screen.
- * 
- *    - 'role' is a "Prop" (short for Property). It's like a parameter passed to a function.
- */
 export const Stock = ({ role }: StockProps) => {
-  // 4. LOGIC: We calculate things here before showing them to the user.
   const isDealer = role === UserRole.AGRO_DEALER;
   const isClerk = role === UserRole.AGENT;
 
@@ -42,12 +25,11 @@ export const Stock = ({ role }: StockProps) => {
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
   const [newItemUnit, setNewItemUnit] = useState('Bags');
+  const [restockHistory, setRestockHistory] = useState<any[]>([]);
 
-  // Calculate dynamic capacity percentages based on keywords in item names
   const fertilizerQty = (stockItems || []).filter(i => i.name.toLowerCase().includes('fertilizer')).reduce((sum, item) => sum + item.qty, 0);
   const seedQty = (stockItems || []).filter(i => i.name.toLowerCase().includes('seed')).reduce((sum, item) => sum + item.qty, 0);
   
-  // Assume max capacities for the demo (1000 for fertilizer, 500 for seeds)
   const fertilizerCapacity = Math.min(Math.round((fertilizerQty / 1000) * 100), 100);
   const seedAvailability = Math.min(Math.round((seedQty / 500) * 100), 100);
 
@@ -85,147 +67,112 @@ export const Stock = ({ role }: StockProps) => {
     setNewItemQty('');
   };
 
-  if (isLoading) {
-    return (
-      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-12 h-12 text-primary animate-spin" />
-        <p className="text-sm font-bold text-neutral-500 uppercase tracking-widest">Loading Warehouse Data...</p>
-      </div>
-    );
-  }
+  const columns = [
+    { 
+      header: 'Item Name', 
+      accessor: (row: any) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-surface-container-high rounded-xl flex items-center justify-center text-primary">
+            <Package size={20} />
+          </div>
+          <span className="font-bold text-sm">{row.name}</span>
+        </div>
+      ),
+      skeletonWidth: '12rem'
+    },
+    { 
+      header: 'Quantity', 
+      accessor: (row: any) => (
+        <>
+          <span className="text-sm font-black">{row.qty}</span>
+          <span className="text-[10px] font-bold text-neutral-400 ml-1 uppercase">{row.unit}</span>
+        </>
+      ),
+      skeletonWidth: '4rem'
+    },
+    { 
+      header: 'Status', 
+      accessor: (row: any) => {
+        const variant: BadgeVariant = row.status === 'STABLE' ? 'primary' : 'error';
+        return <Badge variant={variant}>{row.status}</Badge>;
+      },
+      skeletonWidth: '5rem'
+    },
+    { 
+      header: 'Action', 
+      accessor: (row: any) => (
+        <button 
+          onClick={() => handleDelete(row.name)}
+          className="p-2 text-error/70 hover:text-error hover:bg-error/10 rounded-full transition-colors"
+          title="Delete Item"
+        >
+          <Trash2 size={18} />
+        </button>
+      ),
+      skeletonWidth: '2rem'
+    }
+  ];
 
-  /**
-   * 6. THE RETURN STATEMENT (JSX):
-   *    This looks like HTML, but it's actually "JSX." It describes what the UI 
-   *    should look like. React converts this into real HTML for the browser.
-   */
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      {/* HEADER SECTION: Title and Action Buttons */}
-      <div className="flex justify-between items-end">
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary mb-1 block">
-            {/* CONDITIONAL RENDERING: "If this, show that." */}
-            {isClerk ? 'Depot Inventory' : isDealer ? 'Shop Inventory' : 'Regional Stock'}
-          </span>
-          <h2 className="text-3xl font-black font-headline tracking-tight">Stock Management</h2>
-        </div>
-        
-        <div className="flex gap-3">
-          <button 
-            onClick={handleExport}
-            className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-black/5 transition-colors"
-          >
-            <Download size={16} /> Export
-          </button>
-          
-          {/* MORE CONDITIONAL RENDERING: Only show "Add Stock" for Clerks or Dealers */}
-          {(isClerk || isDealer) && (
+      <PageHeader 
+        title="Stock Management"
+        category={isClerk ? 'Depot Inventory' : isDealer ? 'Shop Inventory' : 'Regional Stock'}
+        actions={
+          <>
             <button 
-              onClick={() => setShowAddModal(true)}
-              className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-primary/20">
-              <Plus size={16} /> Add Stock
+              onClick={handleExport}
+              className="bg-surface-container-high px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:bg-black/5 transition-colors"
+            >
+              <Download size={16} /> Export
             </button>
-          )}
-        </div>
-      </div>
+            {(isClerk || isDealer) && (
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg shadow-primary/20"
+              >
+                <Plus size={16} /> Add Stock
+              </button>
+            )}
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* MAIN TABLE SECTION */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-surface-container-lowest rounded-[2.5rem] border border-black/5 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-surface-container-low/50">
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Item Name</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Quantity</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Status</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-neutral-500">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/5">
-                  {/**
-                   * 7. MAPPING: This is how we loop through the 'stockItems' list.
-                   *    For every item in the list, we create a new table row (<tr>).
-                   *    'key' is a unique ID so React can track each row.
-                   */}
-                  {stockItems.map((item) => (
-                    <tr key={item.name} className="hover:bg-primary/5 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-surface-container-high rounded-xl flex items-center justify-center text-primary">
-                            <Package size={20} />
-                          </div>
-                          <span className="font-bold text-sm">{item.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-black">{item.qty}</span>
-                        <span className="text-[10px] font-bold text-neutral-400 ml-1 uppercase">{item.unit}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={cn(
-                          "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
-                          // Dynamic styling based on stock status
-                          item.status === 'STABLE' ? "bg-primary/10 text-primary" : "bg-error/10 text-error"
-                        )}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button 
-                          onClick={() => handleDelete(item.name)}
-                          className="p-2 text-error/70 hover:text-error hover:bg-error/10 rounded-full transition-colors"
-                          title="Delete Item"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        <div className="lg:col-span-2">
+          <DataTable 
+            columns={columns}
+            data={stockItems || []}
+            isLoading={isLoading}
+            rowKey={(item) => item.name}
+            emptyMessage="No stock items found."
+          />
         </div>
 
-        {/* SIDEBAR SECTION: Insights */}
         <div className="space-y-6">
-          <div className="bg-primary-container p-8 rounded-[2.5rem] text-white shadow-xl shadow-primary/20">
-            <h4 className="text-lg font-bold font-headline mb-4">Stock Insights</h4>
-            <div className="space-y-6">
-              {/* Progress Bar 1 */}
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-2">
-                  <span>Fertilizer Capacity</span>
-                  <span>{fertilizerCapacity}%</span>
-                </div>
-                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${fertilizerCapacity}%` }} />
-                </div>
-              </div>
-              
-              {/* Progress Bar 2 */}
-              <div>
-                <div className="flex justify-between text-xs font-bold mb-2">
-                  <span>Seed Availability</span>
-                  <span>{seedAvailability}%</span>
-                </div>
-                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-tertiary-fixed-dim rounded-full transition-all duration-1000" style={{ width: `${seedAvailability}%` }} />
-                </div>
+          <StockInsights 
+            isLoading={isLoading}
+            fertilizerCapacity={fertilizerCapacity}
+            seedAvailability={seedAvailability}
+            onRestockRequest={() => setShowRestockModal(true)}
+          />
+
+          {restockHistory.length > 0 && (
+            <div className="bg-surface-container-lowest p-6 rounded-[2.5rem] border border-black/5 shadow-sm animate-in fade-in slide-in-from-right-4 duration-500">
+              <h4 className="text-sm font-bold font-headline mb-4 px-1">Restock History</h4>
+              <div className="space-y-3">
+                {restockHistory.map((req) => (
+                  <div key={req.id} className="p-4 bg-surface-container-low rounded-2xl flex justify-between items-center group hover:bg-primary/5 transition-colors">
+                    <div>
+                      <p className="font-bold text-xs">{req.item}</p>
+                      <p className="text-[9px] text-neutral-400 font-bold uppercase">{req.id} • {req.date}</p>
+                    </div>
+                    <Badge variant="primary" className="text-[7px] py-0.5">{req.status}</Badge>
+                  </div>
+                ))}
               </div>
             </div>
-            
-            <button 
-              onClick={() => setShowRestockModal(true)}
-              className="w-full mt-8 bg-white text-primary py-3 rounded-2xl font-bold text-sm hover:bg-opacity-90 transition-all shadow-lg shadow-white/20"
-            >
-              Request Restock
-            </button>
-          </div>
+          )}
         </div>
       </div>
 
@@ -349,7 +296,7 @@ export const Stock = ({ role }: StockProps) => {
                         <p className="font-bold text-sm">{item.name}</p>
                         <p className="text-[10px] text-neutral-400 font-bold">Current: {item.qty} {item.unit}</p>
                       </div>
-                      <span className="px-2 py-1 bg-error/10 text-error text-[9px] font-black rounded uppercase">LOW</span>
+                      <Badge variant="error">LOW</Badge>
                     </div>
                   )) : (
                     <div className="py-8 text-center text-neutral-400">
@@ -366,6 +313,17 @@ export const Stock = ({ role }: StockProps) => {
                     setStockItems(stockItems.map(i =>
                       i.status === 'LOW' ? { ...i, status: 'PENDING RESTOCK' } : i
                     ));
+                    
+                    // Add to history
+                    const newRequests = lowItems.map(item => ({
+                      id: `REQ-${Date.now()}-${item.name.substring(0,3).toUpperCase()}`,
+                      item: item.name,
+                      qty: 500, // Default restock qty
+                      date: new Date().toLocaleDateString(),
+                      status: 'REQUESTED'
+                    }));
+                    setRestockHistory([...newRequests, ...restockHistory]);
+                    
                     setShowRestockModal(false);
                     toast.success(`Restock request submitted for ${lowItems.length} item(s).`);
                   }}

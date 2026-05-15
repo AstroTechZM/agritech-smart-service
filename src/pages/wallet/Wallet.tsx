@@ -20,10 +20,12 @@ import {
   ArrowLeft
 } from 'lucide-react'; // Visual Icons
 import { cn } from '@/src/lib/utils'; // Styling helper
-import { MOCK_TRANSACTIONS } from '@/src/data/mockData'; // Mock database data
 import { User } from '@/src/types'; // Types
 import { motion, AnimatePresence } from 'motion/react'; // Animation tools
 import { useWallet } from '@/src/context/WalletContext';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
+import { toast } from 'sonner';
 
 
 interface WalletProps {
@@ -43,7 +45,7 @@ export const Wallet = ({ user }: WalletProps) => {
   const [password, setPassword] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const { balance, transactions, addTransaction } = useWallet();
+  const { balance, transactions, isLoading, addTransaction } = useWallet();
 
   // Helper to reset modal state
   const resetModal = () => {
@@ -95,11 +97,19 @@ export const Wallet = ({ user }: WalletProps) => {
                 <WalletIcon size={24} />
               </div>
             </div>
-            <h3 className="text-5xl font-black font-headline">ZMW {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+            {isLoading ? (
+              <Skeleton width="16rem" height="3rem" baseColor="rgba(255,255,255,0.2)" highlightColor="rgba(255,255,255,0.4)" />
+            ) : (
+              <h3 className="text-5xl font-black font-headline">ZMW {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+            )}
             <div className="flex gap-8 border-t border-white/10 pt-6">
               <div>
                 <p className="text-[10px] font-bold uppercase opacity-60 mb-1">Total Earned (2026)</p>
-                <p className="text-lg font-black">ZMW {totalEarned.toLocaleString()}</p>
+                {isLoading ? (
+                  <Skeleton width="6rem" height="1.5rem" baseColor="rgba(255,255,255,0.2)" highlightColor="rgba(255,255,255,0.4)" />
+                ) : (
+                  <p className="text-lg font-black">ZMW {totalEarned.toLocaleString()}</p>
+                )}
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase opacity-60 mb-1">Pending Settlement</p>
@@ -138,47 +148,68 @@ export const Wallet = ({ user }: WalletProps) => {
         </div>
 
         <div className="space-y-4">
-          {transactions.map((tx) => (
-            <div
-              key={tx.id}
-              className="flex items-center justify-between p-4 bg-surface-container-low/50 rounded-2xl hover:bg-surface-container-low transition-colors group cursor-pointer"
-            >
-              <div className="flex items-center gap-4">
-                <div className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
-                  // Dynamic colors based on whether it's money coming IN or going OUT
-                  tx.type === 'PAYOUT' ? "bg-success/10 text-success group-hover:bg-success group-hover:text-white" : "bg-neutral-100 text-neutral-500 group-hover:bg-neutral-600 group-hover:text-white"
-                )}>
-                  {tx.type === 'PAYOUT' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-neutral-900">{tx.source}</h4>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{tx.id}</span>
-                    <span className="w-1 h-1 bg-neutral-300 rounded-full" />
-                    <span className="text-[10px] font-bold text-neutral-500">{tx.date}</span>
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={`skel-tx-${i}`} className="flex items-center justify-between p-4 bg-surface-container-low/50 rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <Skeleton circle={true} width="3rem" height="3rem" />
+                  <div>
+                    <Skeleton width="8rem" height="1rem" className="mb-1 block" />
+                    <Skeleton width="6rem" height="0.75rem" />
                   </div>
                 </div>
-              </div>
-              <div className="text-right flex items-center gap-6">
-                <div>
-                  <p className={cn(
-                    "text-sm font-black",
-                    tx.type === 'PAYOUT' ? "text-success" : "text-neutral-900"
-                  )}>
-                    {tx.type === 'PAYOUT' ? '+' : '-'} ZMW {tx.amount.toLocaleString()}
-                  </p>
-                  <span className={cn(
-                    "text-[8px] font-black uppercase tracking-widest",
-                    tx.status === 'COMPLETED' ? "text-neutral-400" : "text-tertiary animate-pulse"
-                  )}>
-                    {tx.status}
-                  </span>
+                <div className="text-right flex items-center gap-6">
+                  <div>
+                    <Skeleton width="5rem" height="1rem" className="mb-1 block" />
+                    <Skeleton width="3rem" height="0.5rem" />
+                  </div>
+                  <Skeleton width="1rem" height="1rem" />
                 </div>
-                <ChevronRight size={16} className="text-neutral-300 group-hover:text-primary transition-colors" />
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            transactions.map((tx) => (
+              <div
+                key={tx.id}
+                className="flex items-center justify-between p-4 bg-surface-container-low/50 rounded-2xl hover:bg-surface-container-low transition-colors group cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
+                    // Dynamic colors based on whether it's money coming IN or going OUT
+                    tx.type === 'PAYOUT' ? "bg-success/10 text-success group-hover:bg-success group-hover:text-white" : "bg-neutral-100 text-neutral-500 group-hover:bg-neutral-600 group-hover:text-white"
+                  )}>
+                    {tx.type === 'PAYOUT' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-neutral-900">{tx.source}</h4>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{tx.id}</span>
+                      <span className="w-1 h-1 bg-neutral-300 rounded-full" />
+                      <span className="text-[10px] font-bold text-neutral-500">{tx.date}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right flex items-center gap-6">
+                  <div>
+                    <p className={cn(
+                      "text-sm font-black",
+                      tx.type === 'PAYOUT' ? "text-success" : "text-neutral-900"
+                    )}>
+                      {tx.type === 'PAYOUT' ? '+' : '-'} ZMW {tx.amount.toLocaleString()}
+                    </p>
+                    <span className={cn(
+                      "text-[8px] font-black uppercase tracking-widest",
+                      tx.status === 'COMPLETED' ? "text-neutral-400" : "text-tertiary animate-pulse"
+                    )}>
+                      {tx.status}
+                    </span>
+                  </div>
+                  <ChevronRight size={16} className="text-neutral-300 group-hover:text-primary transition-colors" />
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -305,7 +336,14 @@ export const Wallet = ({ user }: WalletProps) => {
                     </button>
                     <button
                       disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0}
-                      onClick={() => setWithdrawStep('PASSWORD')}
+                      onClick={() => {
+                        const amount = parseFloat(withdrawAmount);
+                        if (amount > balance) {
+                          toast.error('Insufficient funds.');
+                          return;
+                        }
+                        setWithdrawStep('PASSWORD');
+                      }}
                       className="flex-1 bg-primary text-white py-4 rounded-2xl font-black font-headline text-sm shadow-xl shadow-primary/20 disabled:opacity-50 transition-all"
                     >
                       Continue
@@ -345,14 +383,19 @@ export const Wallet = ({ user }: WalletProps) => {
                       disabled={!password || isProcessing}
                       onClick={() => {
                         setIsProcessing(true);
-                        setTimeout(() => {
-                          addTransaction({
-                            source: selectedMethod === 'MOBILE' ? 'Mobile Money Transfer' : 'Bank Transfer',
-                            amount: parseFloat(withdrawAmount),
-                            type: 'WITHDRAWAL',
-                          });
-                          setWithdrawStep('SUCCESS');
-                          setIsProcessing(false);
+                        setTimeout(async () => {
+                          try {
+                            await addTransaction({
+                              source: selectedMethod === 'MOBILE' ? 'Mobile Money Transfer' : 'Bank Transfer',
+                              amount: parseFloat(withdrawAmount),
+                              type: 'WITHDRAWAL',
+                            });
+                            setWithdrawStep('SUCCESS');
+                          } catch (err) {
+                            toast.error('Failed to process withdrawal. Please try again.');
+                          } finally {
+                            setIsProcessing(false);
+                          }
                         }, 1500);
                       }}
                       className="flex-1 bg-primary text-white py-4 rounded-2xl font-black font-headline text-sm shadow-xl shadow-primary/20 disabled:opacity-50 transition-all flex items-center justify-center"

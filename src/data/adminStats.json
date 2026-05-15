@@ -1,0 +1,20 @@
+{
+  "kpis": [
+    { "label": "Registered Farmers", "value": "42,890", "trend": "+4%", "color": "primary" },
+    { "label": "FISP Redemption", "value": "76.4%", "trend": "85% Target", "color": "primary" },
+    { "label": "Active Agro-Dealers", "value": "142", "trend": "Dist. Wide", "color": "primary" },
+    { "label": "Fraud Alerts", "value": "12", "trend": "High Priority", "color": "error", "urgent": true },
+    { "label": "Pathway B Pending", "value": "892", "trend": "In Progress", "color": "tertiary" }
+  ],
+  "wards": [
+    { "label": "Kanyama Ward", "value": 92, "color": "bg-primary" },
+    { "label": "Chawama Ward", "value": 74, "color": "bg-primary/80" },
+    { "label": "Kabwata Ward", "value": 58, "color": "bg-tertiary" },
+    { "label": "Matera Ward", "value": 41, "color": "bg-error" }
+  ],
+  "fraudAlerts": [
+    { "nrc": "491022/11/1", "dealer": "Kasama Agro", "reason": "double-dip", "time": "14:22" },
+    { "nrc": "338102/52/1", "dealer": "Lusaka Seeds", "reason": "GPS mismatch", "time": "12:05" },
+    { "nrc": "110928/65/1", "dealer": "Choma Inputs", "reason": "volume anomaly", "time": "09:45" }
+  ]
+}

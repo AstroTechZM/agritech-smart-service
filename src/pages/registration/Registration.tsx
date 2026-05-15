@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowRight, MapPin, Search, CheckCircle2, ShieldCheck, Camera, Pencil, X, Loader2, Printer, QrCode } from 'lucide-react';
+import { ArrowRight, MapPin, Search, CheckCircle2, ShieldCheck, Camera, Pencil, X, Loader2, Printer, QrCode, AlertTriangle } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { api } from '@/src/services/api';
@@ -11,7 +11,9 @@ import { useFarmers } from '@/src/context/FarmerContext';
 export const Registration = () => {
   const [step, setStep] = useState(1);
   const [isCapturingGPS, setIsCapturingGPS] = useState(false);
-  const { addFarmer } = useFarmers();
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
+  const [eligibilityResult, setEligibilityResult] = useState<{ status: 'IDLE' | 'ELIGIBLE' | 'INELIGIBLE', reason?: string }>({ status: 'IDLE' });
+  const { addFarmer, farmers } = useFarmers();
 
   const [formData, setFormData] = useState({
     nrc: '',
@@ -86,8 +88,38 @@ export const Registration = () => {
 
   const handleNext = () => {
     if (validateStep(step)) {
+      if (step === 2) {
+        // Run real eligibility check when moving to Step 3
+        checkEligibility();
+      }
       setStep(prev => prev + 1);
     }
+  };
+
+  const checkEligibility = () => {
+    setIsCheckingEligibility(true);
+    setEligibilityResult({ status: 'IDLE' });
+    
+    setTimeout(() => {
+      // Check for duplicate NRC
+      const isDuplicate = farmers.some(f => f.nrc === formData.nrc);
+      
+      if (isDuplicate) {
+        setEligibilityResult({ 
+          status: 'INELIGIBLE', 
+          reason: 'A farmer with this NRC is already registered in the FISP system.' 
+        });
+        toast.error("Duplicate NRC detected!");
+      } else if (parseFloat(formData.farmSize) < 0.5) {
+        setEligibilityResult({ 
+          status: 'INELIGIBLE', 
+          reason: 'Land size is below the minimum requirement for FISP eligibility (0.5 Ha).' 
+        });
+      } else {
+        setEligibilityResult({ status: 'ELIGIBLE' });
+      }
+      setIsCheckingEligibility(false);
+    }, 2000);
   };
 
   const handleCompleteRegistration = async () => {
@@ -342,6 +374,32 @@ export const Registration = () => {
                 </div>
               </div>
             </div>
+            <div className="space-y-4">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Primary Crops</label>
+              <div className="flex flex-wrap gap-2">
+                {['Maize', 'Soybeans', 'Sunflower', 'Cotton', 'Tobacco', 'Groundnuts'].map(crop => (
+                  <button
+                    key={crop}
+                    onClick={() => {
+                      const currentCrops = [...formData.crops];
+                      if (currentCrops.includes(crop)) {
+                        setFormData(prev => ({ ...prev, crops: currentCrops.filter(c => c !== crop) }));
+                      } else {
+                        setFormData(prev => ({ ...prev, crops: [...currentCrops, crop] }));
+                      }
+                    }}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-xs font-bold border transition-all",
+                      formData.crops.includes(crop) 
+                        ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
+                        : "bg-surface-container-low text-neutral-600 border-black/5 hover:border-primary/30"
+                    )}
+                  >
+                    {crop}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex gap-4">
               <button onClick={() => setStep(1)} className="flex-1 bg-surface-container-low py-5 rounded-2xl font-bold">Back</button>
               <button onClick={handleNext} className="flex-[2] primary-gradient text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2">
@@ -358,37 +416,62 @@ export const Registration = () => {
             <div className="bg-surface-container-low p-8 rounded-3xl border border-black/5 space-y-6">
               <div className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-black/5">
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-                  <Search size={24} />
+                  {isCheckingEligibility ? <Loader2 size={24} className="animate-spin" /> : <Search size={24} />}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold">Cross-referencing Agri-Tech Database...</p>
+                  <p className="text-sm font-bold">
+                    {isCheckingEligibility ? "Cross-referencing Agri-Tech Database..." : "Database Check Complete"}
+                  </p>
                   <div className="w-full bg-black/5 h-1.5 rounded-full mt-2 overflow-hidden">
-                    <div className="bg-primary h-full w-3/4 animate-pulse" />
+                    <div className={cn(
+                      "h-full transition-all duration-1000",
+                      isCheckingEligibility ? "bg-primary w-3/4 animate-pulse" : "bg-success w-full"
+                    )} />
                   </div>
                 </div>
               </div>
+
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 size={20} className="text-tertiary" />
+                  {isCheckingEligibility ? (
+                    <div className="w-5 h-5 bg-neutral-200 rounded-full animate-pulse" />
+                  ) : (
+                    <CheckCircle2 size={20} className={cn(eligibilityResult.status === 'INELIGIBLE' && formData.nrc && farmers.some(f => f.nrc === formData.nrc) ? "text-error" : "text-tertiary")} />
+                  )}
                   <span className="text-sm">No duplicate NRC found</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 size={20} className="text-tertiary" />
+                   {isCheckingEligibility ? (
+                    <div className="w-5 h-5 bg-neutral-200 rounded-full animate-pulse" />
+                  ) : (
+                    <CheckCircle2 size={20} className={cn(parseFloat(formData.farmSize) < 0.5 ? "text-error" : "text-tertiary")} />
+                  )}
                   <span className="text-sm">Land size verified ({'>'} 0.5 Ha)</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 size={20} className="text-tertiary" />
-                  <span className="text-sm">Active cooperative membership confirmed</span>
+              </div>
+
+              {!isCheckingEligibility && (
+                <div className={cn(
+                  "p-4 rounded-2xl border flex items-center justify-between transition-all duration-500 animate-in zoom-in-95",
+                  eligibilityResult.status === 'ELIGIBLE' 
+                    ? "bg-tertiary/10 border-tertiary/20 text-tertiary" 
+                    : "bg-error/10 border-error/20 text-error"
+                )}>
+                  <div className="flex flex-col">
+                    <span className="font-bold">Status: {eligibilityResult.status}</span>
+                    {eligibilityResult.reason && <span className="text-[10px] font-medium opacity-80">{eligibilityResult.reason}</span>}
+                  </div>
+                  {eligibilityResult.status === 'ELIGIBLE' ? <ShieldCheck size={24} /> : <AlertTriangle size={24} />}
                 </div>
-              </div>
-              <div className="p-4 bg-tertiary/10 rounded-2xl border border-tertiary/20 flex items-center justify-between">
-                <span className="font-bold text-tertiary">Status: ELIGIBLE</span>
-                <ShieldCheck size={24} className="text-tertiary" />
-              </div>
+              )}
             </div>
             <div className="flex gap-4">
               <button onClick={() => setStep(2)} className="flex-1 bg-surface-container-low py-5 rounded-2xl font-bold">Back</button>
-              <button onClick={handleNext} className="flex-[2] primary-gradient text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2">
+              <button 
+                onClick={handleNext} 
+                disabled={isCheckingEligibility || eligibilityResult.status !== 'ELIGIBLE'}
+                className="flex-[2] primary-gradient text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
                 Next: Verification <ArrowRight size={20} />
               </button>
             </div>
