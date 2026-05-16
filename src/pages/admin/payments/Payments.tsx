@@ -132,7 +132,9 @@ export const Payments = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <StatCard key={`skel-${i}`} label="" isLoading={true} />
+            <div key={`skel-${i}`}>
+              <StatCard label="" isLoading={true} />
+            </div>
           ))
         ) : (
           stats.map((stat) => (

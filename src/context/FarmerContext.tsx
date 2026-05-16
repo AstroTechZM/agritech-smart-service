@@ -30,8 +30,8 @@ export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const fetchFarmers = async () => {
       try {
         setIsLoading(true);
-        const registeredFarmers = await api.fetchFarmers();
-        const mappedFarmers = registeredFarmers.map(f => ({
+        const registeredFarmers = (await api.fetchFarmers()) as any[];
+        const mappedFarmers = registeredFarmers.map((f: any) => ({
           nrc: f.nrc,
           firstName: f.first_name,
           lastName: f.last_name,

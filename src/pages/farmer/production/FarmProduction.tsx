@@ -87,6 +87,8 @@ export const FarmProduction = () => {
     toast.success(`Harvest record added to your farm history.`);
   };
 
+  const productionItems = productionData ?? [];
+
   const handleExportReport = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
       + "ID,Crop,Season,Area (Ha),Harvest Date,Yield (KG),Status\n"

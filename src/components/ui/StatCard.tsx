@@ -14,7 +14,7 @@ interface StatCardProps {
   variant?: 'default' | 'primary';
 }
 
-export const StatCard = ({
+export const StatCard: React.FC<StatCardProps> = ({
   label,
   value,
   trend,
@@ -23,7 +23,7 @@ export const StatCard = ({
   urgent = false,
   className,
   variant = 'default'
-}: StatCardProps) => {
+}) => {
   if (isLoading) {
     return (
       <div className={cn("bg-surface-container-lowest p-6 rounded-3xl border border-black/5 shadow-sm", className)}>

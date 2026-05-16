@@ -23,13 +23,14 @@ export const apiClient = {
     return parseResponse<T>(response);
   },
 
-  post: async <T>(path: string, data: any): Promise<T> => {
+  post: async <T>(path: string, data?: any): Promise<T> => {
     const url = `${API_BASE_URL}${path}`;
-    const response = await fetch(url, {
+    const options: RequestInit = {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+      headers: { 'Content-Type': 'application/json' }
+    };
+    if (typeof data !== 'undefined') options.body = JSON.stringify(data);
+    const response = await fetch(url, options);
     return parseResponse<T>(response);
   },
 

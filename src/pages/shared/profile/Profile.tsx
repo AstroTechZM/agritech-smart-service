@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { api } from '@/src/services';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '@/src/lib/utils';
 
 interface ProfileProps {
   user: User;

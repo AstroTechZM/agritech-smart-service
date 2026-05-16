@@ -39,7 +39,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const addTransaction = async (tx: Omit<Transaction, 'id' | 'date' | 'status'>) => {
     if (tx.type === 'WITHDRAWAL') {
-      await api.postWithdrawal(tx.amount);
+      await api.postWithdrawal(tx.amount, 'ADMIN-1');
     } else {
       // For other types, simulate an API call if needed, or just let the refresh handle it
       await new Promise(resolve => setTimeout(resolve, LOGIC_CONSTANTS.API_DELAY_SHORT));

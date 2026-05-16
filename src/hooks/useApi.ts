@@ -30,5 +30,5 @@ export function useApi<T>(apiFunc: (...args: any[]) => Promise<T>, options: UseA
     }
   }, [execute, options.immediate]);
 
-  return { data, isLoading, error, execute, setData };
+  return { data, isLoading, error, execute, setData, refresh: execute };
 }

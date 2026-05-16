@@ -3,7 +3,7 @@
     "target": "ES2022",
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
-    "module": "nodenext",
+    "module": "ESNext",
     "lib": [
       "ES2022",
       "DOM",
@@ -11,8 +11,10 @@
     ],
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "noImplicitAny": false,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
+    "baseUrl": "./",
     "types": ["node"],
     "isolatedModules": true,
     "moduleDetection": "force",
@@ -20,9 +22,13 @@
     "jsx": "react-jsx",
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
+      ],
+      "@/src/*": [
+        "./src/*"
       ]
     },
+    "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "noEmit": true
   }
