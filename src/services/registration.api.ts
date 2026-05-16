@@ -1,6 +1,4 @@
-import { delay } from './api-client';
-import { REGISTERED_FARMERS } from '../data/mockData';
-import { LOGIC_CONSTANTS } from '../constants';
+import { apiClient } from './api-client';
 
 /**
  * REGISTRATION API SERVICE
@@ -13,15 +11,7 @@ export const registrationApi = {
    * Submits new farmer data, including KYC and farm details.
    */
   registerFarmer: async (farmerData: any) => {
-    await delay(LOGIC_CONSTANTS.API_DELAY_MEDIUM);
-    const newFarmer = { 
-      ...farmerData, 
-      id: `FARMER-${Date.now()}`,
-      status: 'VERIFIED',
-      memberSince: new Date().getFullYear()
-    };
-    REGISTERED_FARMERS.push(newFarmer);
-    return newFarmer;
+    return apiClient.post('/farmers/register', farmerData);
   },
 
   /**
@@ -29,7 +19,6 @@ export const registrationApi = {
    * Fetches the list of all registered farmers (Agent/Admin view).
    */
   fetchFarmers: async () => {
-    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
-    return REGISTERED_FARMERS;
+    return apiClient.get('/farmers');
   }
 };

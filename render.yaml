@@ -1,0 +1,21 @@
+# Render service for FRA backend + managed Postgres
+services:
+  - type: web
+    name: fra-backend
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: "npm install && npm run backend:migrate"
+    startCommand: "npm run server"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fra-db
+databases:
+  - name: fra-db
+    engine: postgres
+    version: "14"
+    region: oregon
+    plan: starter

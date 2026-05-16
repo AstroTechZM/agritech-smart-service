@@ -29,8 +29,8 @@ export const Logistics = ({ role }: LogisticsProps) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredShipments = (shipments || []).filter(s => 
-    s.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    s.vehicle.toLowerCase().includes(searchQuery.toLowerCase())
+    (s.id || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (s.vehicle || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const updateShipmentStatus = (id: string, newStatus: string, reason?: string) => {

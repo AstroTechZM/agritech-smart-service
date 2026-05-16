@@ -1,25 +1,45 @@
-import { LOGIC_CONSTANTS } from '../constants';
+// In production, set VITE_API_BASE_URL to your deployed backend URL.
+// Example: https://backend.example.com/api/v1
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
 
-/**
- * BASE API CLIENT
- * This file handles the simulated network layer. 
- * In a production app, this would use 'fetch' or 'axios' to talk to the real backend.
- */
+async function parseResponse<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type') || '';
+  const body = contentType.includes('application/json') ? await response.json().catch(() => null) : null;
 
-// Simulated delay helper
-export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  if (!response.ok) {
+    throw new Error((body && (body.message || body.error)) || `${response.status} ${response.statusText}`);
+  }
 
-// Mock response wrapper to simulate fetch/axios behavior
+  return body as T;
+}
+
 export const apiClient = {
-  get: async <T>(url: string, delayMs: number = LOGIC_CONSTANTS.API_DELAY_SHORT): Promise<T> => {
-    console.log(`[API] GET ${url}`);
-    await delay(delayMs);
-    return null as any; // This will be overridden by the domain services
+  get: async <T>(path: string): Promise<T> => {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return parseResponse<T>(response);
   },
-  
-  post: async <T>(url: string, data: any, delayMs: number = LOGIC_CONSTANTS.API_DELAY_MEDIUM): Promise<T> => {
-    console.log(`[API] POST ${url}`, data);
-    await delay(delayMs);
-    return null as any; // This will be overridden by the domain services
+
+  post: async <T>(path: string, data: any): Promise<T> => {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return parseResponse<T>(response);
+  },
+
+  put: async <T>(path: string, data: any): Promise<T> => {
+    const url = `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return parseResponse<T>(response);
   }
 };

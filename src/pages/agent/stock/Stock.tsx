@@ -29,11 +29,11 @@ export const Stock = ({ role }: StockProps) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredStock = (stockItems || []).filter(i => 
-    i.name.toLowerCase().includes(searchQuery.toLowerCase())
+    (i.name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const fertilizerQty = (stockItems || []).filter(i => i.name.toLowerCase().includes('fertilizer')).reduce((sum, item) => sum + item.qty, 0);
-  const seedQty = (stockItems || []).filter(i => i.name.toLowerCase().includes('seed')).reduce((sum, item) => sum + item.qty, 0);
+  const fertilizerQty = (stockItems || []).filter(i => (i.name || '').toLowerCase().includes('fertilizer')).reduce((sum, item) => sum + (item.qty || 0), 0);
+  const seedQty = (stockItems || []).filter(i => (i.name || '').toLowerCase().includes('seed')).reduce((sum, item) => sum + (item.qty || 0), 0);
   
   const fertilizerCapacity = Math.min(Math.round((fertilizerQty / 1000) * 100), 100);
   const seedAvailability = Math.min(Math.round((seedQty / 500) * 100), 100);

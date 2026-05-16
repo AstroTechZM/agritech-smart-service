@@ -19,9 +19,9 @@ export const Payments = () => {
   const filteredPayments = useMemo(() => {
     if (!payments) return [];
     return payments.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.nrc.includes(searchQuery);
-      const matchesDistrict = districtFilter === 'All Districts' || p.district === districtFilter;
-      const matchesStatus = statusFilter === 'All Status' || p.status.toLowerCase() === statusFilter.toLowerCase();
+      const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (p.nrc || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDistrict = districtFilter === 'All Districts' || (p.district || '') === districtFilter;
+      const matchesStatus = statusFilter === 'All Status' || (p.status || '').toLowerCase() === statusFilter.toLowerCase();
       return matchesSearch && matchesDistrict && matchesStatus;
     });
   }, [payments, searchQuery, districtFilter, statusFilter]);

@@ -1,6 +1,4 @@
-import { delay } from './api-client';
-import { MOCK_STOCK, MOCK_VOUCHERS, MOCK_REDEMPTIONS } from '../data/mockData';
-import { LOGIC_CONSTANTS } from '../constants';
+import { apiClient } from './api-client';
 
 /**
  * STOCK & VOUCHER API SERVICE
@@ -13,8 +11,7 @@ export const stockApi = {
    * Returns current stock levels at the local depot.
    */
   fetchStock: async () => {
-    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
-    return MOCK_STOCK;
+    return apiClient.get('/inventory');
   },
 
   /**
@@ -22,8 +19,7 @@ export const stockApi = {
    * Fetches active vouchers for the logged-in farmer.
    */
   fetchVouchers: async () => {
-    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
-    return MOCK_VOUCHERS;
+    return apiClient.get('/vouchers');
   },
 
   /**
@@ -31,25 +27,7 @@ export const stockApi = {
    * Processes a voucher PIN and initiates distribution.
    */
   redeemVoucher: async (pin: string) => {
-    await delay(LOGIC_CONSTANTS.API_DELAY_MEDIUM);
-    const voucher = MOCK_VOUCHERS.find(v => v.pin === pin || v.id === pin);
-    
-    if (!voucher) throw new Error("Invalid Voucher PIN or ID");
-    if (voucher.status === 'REDEEMED') throw new Error("Voucher already redeemed");
-    
-    voucher.status = 'REDEEMED';
-    
-    const redemption = {
-      id: `RED-${Date.now()}`,
-      farmer: "Authenticated Farmer",
-      item: voucher.type,
-      amount: voucher.allocation,
-      date: new Date().toLocaleDateString(),
-      status: 'COMPLETED'
-    };
-    
-    MOCK_REDEMPTIONS.unshift(redemption);
-    return { success: true, redemption };
+    return apiClient.post('/vouchers/redeem', { pin_code: pin });
   },
 
   /**
@@ -57,7 +35,6 @@ export const stockApi = {
    * History of distributions for the current dealer.
    */
   fetchRedemptions: async () => {
-    await delay(LOGIC_CONSTANTS.API_DELAY_SHORT);
-    return MOCK_REDEMPTIONS;
+    return apiClient.get('/redemptions');
   }
 };
