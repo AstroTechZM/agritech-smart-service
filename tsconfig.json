@@ -4,11 +4,7 @@
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
     "module": "ESNext",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -21,12 +17,9 @@
     "allowJs": true,
     "jsx": "react-jsx",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@/src/*": [
-        "./src/*"
-      ]
+      "@/*": ["./client/*"],
+      "@/client/*": ["./client/*"],
+      "@/shared/*": ["./shared/*"]
     },
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,

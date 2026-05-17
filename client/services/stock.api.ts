@@ -1,0 +1,41 @@
+import { apiClient } from './api-client';
+
+/**
+ * STOCK & VOUCHER API SERVICE
+ * Manages inventory and voucher redemptions.
+ */
+
+export const stockApi = {
+  /**
+   * GET /api/v1/inventory
+   * Returns current stock levels at the local depot.
+   */
+  fetchStock: async () => {
+    return apiClient.get('/inventory');
+  },
+
+  /**
+   * GET /api/v1/vouchers
+   * Fetches active vouchers for the logged-in farmer.
+   */
+  fetchVouchers: async () => {
+    return apiClient.get('/vouchers');
+  },
+
+  /**
+   * POST /api/v1/vouchers/redeem
+   * Processes a voucher PIN and initiates distribution.
+   */
+  redeemVoucher: async (pin: string) => {
+    return apiClient.post('/vouchers/redeem', { pin_code: pin });
+  },
+
+  /**
+   * GET /api/v1/redemptions
+   * History of distributions for the current dealer.
+   */
+  fetchRedemptions: async () => {
+    return apiClient.get('/redemptions');
+  }
+};
+
