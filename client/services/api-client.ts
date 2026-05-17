@@ -1,13 +1,32 @@
+// client/services/api-client.ts
+
 // In production, set VITE_API_BASE_URL to your deployed backend URL.
 // Example: https://backend.example.com/api/v1
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1';
 
+// Reads the JWT token from localStorage and returns an Authorization header.
+// Returns an empty object if no token exists (unauthenticated requests).
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('agritech_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get('content-type') || '';
-  const body = contentType.includes('application/json') ? await response.json().catch(() => null) : null;
+  const body = contentType.includes('application/json')
+    ? await response.json().catch(() => null)
+    : null;
 
   if (!response.ok) {
-    throw new Error((body && (body.message || body.error)) || `${response.status} ${response.statusText}`);
+    // If 401 Unauthorized, clear token and redirect to login
+    if (response.status === 401) {
+      localStorage.removeItem('agritech_token');
+      window.location.href = '/login';
+    }
+    throw new Error(
+      (body && (body.message || body.error)) ||
+        `${response.status} ${response.statusText}`
+    );
   }
 
   return body as T;
@@ -15,33 +34,48 @@ async function parseResponse<T>(response: Response): Promise<T> {
 
 export const apiClient = {
   get: async <T>(path: string): Promise<T> => {
-    const url = `${API_BASE_URL}${path}`;
-    const response = await fetch(url, {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
     });
     return parseResponse<T>(response);
   },
 
-  post: async <T>(path: string, data?: any): Promise<T> => {
-    const url = `${API_BASE_URL}${path}`;
-    const options: RequestInit = {
+  post: async <T>(path: string, data?: unknown): Promise<T> => {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    };
-    if (typeof data !== 'undefined') options.body = JSON.stringify(data);
-    const response = await fetch(url, options);
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: typeof data !== 'undefined' ? JSON.stringify(data) : undefined,
+    });
     return parseResponse<T>(response);
   },
 
-  put: async <T>(path: string, data: any): Promise<T> => {
-    const url = `${API_BASE_URL}${path}`;
-    const response = await fetch(url, {
+  put: async <T>(path: string, data: unknown): Promise<T> => {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(data),
     });
     return parseResponse<T>(response);
-  }
-};
+  },
 
+  delete: async <T>(path: string): Promise<T> => {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+    });
+    return parseResponse<T>(response);
+  },
+};

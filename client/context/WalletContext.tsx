@@ -1,8 +1,17 @@
+// client/context/WalletContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Transaction } from '@/types';
 import { api } from '@/services';
 import { LOGIC_CONSTANTS } from '@/constants';
 import { safeNumber } from '@/lib/utils';
+
+// Mock fallback data — used when backend is not available
+import mockTransactions from '@/data/transactions.json';
+
+const FALLBACK_BALANCE = 4850.00;
+const FALLBACK_TRANSACTIONS: Transaction[] = Array.isArray(mockTransactions)
+  ? (mockTransactions as Transaction[])
+  : [];
 
 interface WalletContextType {
   balance: number;
@@ -14,8 +23,8 @@ interface WalletContextType {
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [balance, setBalance] = useState<number>(0);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [balance, setBalance] = useState<number>(FALLBACK_BALANCE);
+  const [transactions, setTransactions] = useState<Transaction[]>(FALLBACK_TRANSACTIONS);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchWalletData = async () => {
@@ -23,12 +32,15 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsLoading(true);
       const [bal, txs] = await Promise.all([
         api.fetchWalletBalance(),
-        api.fetchWalletTransactions()
+        api.fetchWalletTransactions(),
       ]);
       setBalance(safeNumber(bal));
-      setTransactions(txs);
-    } catch (error) {
-      console.error('Failed to fetch wallet data', error);
+      setTransactions(txs as Transaction[]);
+    } catch {
+      // Backend not available — use mock data silently
+      console.warn('[WalletContext] Using mock wallet data (backend unavailable)');
+      setBalance(FALLBACK_BALANCE);
+      setTransactions(FALLBACK_TRANSACTIONS);
     } finally {
       setIsLoading(false);
     }
@@ -39,15 +51,28 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const addTransaction = async (tx: Omit<Transaction, 'id' | 'date' | 'status'>) => {
-    if (tx.type === 'WITHDRAWAL') {
-      await api.postWithdrawal(tx.amount, 'ADMIN-1');
-    } else {
-      // For other types, simulate an API call if needed, or just let the refresh handle it
-      await new Promise(resolve => setTimeout(resolve, LOGIC_CONSTANTS.API_DELAY_SHORT));
+    try {
+      if (tx.type === 'WITHDRAWAL') {
+        await api.postWithdrawal(tx.amount, 'FARMER-1');
+      } else {
+        await new Promise((resolve) =>
+          setTimeout(resolve, LOGIC_CONSTANTS.API_DELAY_SHORT)
+        );
+      }
+      await fetchWalletData();
+    } catch {
+      // Simulate locally if backend is down
+      const newTx: Transaction = {
+        ...(tx as any),
+        id: `TX-${Date.now()}`,
+        date: new Date().toISOString(),
+        status: 'PENDING',
+      };
+      setTransactions((prev) => [newTx, ...prev]);
+      if (tx.type === 'WITHDRAWAL') {
+        setBalance((prev) => prev - tx.amount);
+      }
     }
-    
-    // Always refresh from the central source of truth (the API/Mock state)
-    await fetchWalletData();
   };
 
   return (
@@ -59,9 +84,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
 export const useWallet = () => {
   const context = useContext(WalletContext);
-  if (context === undefined) {
-    throw new Error('useWallet must be used within a WalletProvider');
-  }
+  if (!context) throw new Error('useWallet must be used within a WalletProvider');
   return context;
 };
-

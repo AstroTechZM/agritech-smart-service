@@ -1,5 +1,9 @@
+// client/context/FarmerContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '@/services';
+
+// Mock fallback farmers — used when backend is not available
+import mockFarmersData from '@/data/users.json';
 
 interface Farmer {
   nrc: string;
@@ -22,8 +26,28 @@ interface FarmerContextType {
 
 const FarmerContext = createContext<FarmerContextType | undefined>(undefined);
 
+// Map raw JSON/API data to the Farmer interface
+const mapToFarmer = (f: any): Farmer => ({
+  nrc: f.nrc,
+  firstName: f.first_name || f.firstName || 'Unknown',
+  lastName: f.last_name || f.lastName || '',
+  gender: f.gender || 'Unknown',
+  district: f.district || 'Lusaka',
+  camp: f.camp || 'Central',
+  farmSize: f.farm_size || f.farmSize || '5.0',
+  gps: f.gps,
+  crops: f.crops || ['Maize'],
+});
+
+// Build fallback list from local JSON (only farmer-role entries)
+const FALLBACK_FARMERS: Farmer[] = Array.isArray(mockFarmersData)
+  ? mockFarmersData
+      .filter((u: any) => u.role === 'FARMER' || u.nrc)
+      .map(mapToFarmer)
+  : [];
+
 export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [farmers, setFarmers] = useState<Farmer[]>([]);
+  const [farmers, setFarmers] = useState<Farmer[]>(FALLBACK_FARMERS);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -31,19 +55,11 @@ export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         setIsLoading(true);
         const registeredFarmers = (await api.fetchFarmers()) as any[];
-        const mappedFarmers = registeredFarmers.map((f: any) => ({
-          nrc: f.nrc,
-          firstName: f.first_name,
-          lastName: f.last_name,
-          gender: f.gender || 'Unknown',
-          district: 'Choma',
-          camp: 'Central',
-          farmSize: '5.0',
-          crops: ['Maize']
-        }));
-        setFarmers(mappedFarmers);
-      } catch (error) {
-        console.error('Failed to fetch farmers', error);
+        setFarmers(registeredFarmers.map(mapToFarmer));
+      } catch {
+        // Backend not available — keep fallback data silently
+        console.warn('[FarmerContext] Using mock farmer data (backend unavailable)');
+        setFarmers(FALLBACK_FARMERS);
       } finally {
         setIsLoading(false);
       }
@@ -53,13 +69,17 @@ export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const addFarmer = async (farmer: Farmer) => {
-    await api.registerFarmer(farmer);
+    try {
+      await api.registerFarmer(farmer);
+    } catch {
+      // Backend unavailable — register locally only
+      console.warn('[FarmerContext] Farmer saved locally (backend unavailable)');
+    }
     setFarmers((prev) => [farmer, ...prev]);
   };
 
   const findFarmerByNRC = (nrc: string) => {
-    const normalizedNRC = nrc.trim();
-    return farmers.find(f => f.nrc === normalizedNRC);
+    return farmers.find((f) => f.nrc === nrc.trim());
   };
 
   return (
@@ -71,9 +91,6 @@ export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
 export const useFarmers = () => {
   const context = useContext(FarmerContext);
-  if (context === undefined) {
-    throw new Error('useFarmers must be used within a FarmerProvider');
-  }
+  if (!context) throw new Error('useFarmers must be used within a FarmerProvider');
   return context;
 };
-

@@ -33,11 +33,7 @@ export const adminApi = {
     return apiClient.post('/admin/payments/approve-all');
   },
 
-  /**
-   * PUT /api/v1/profile
-   */
-  updateProfile: async (profileData: any) => {
-    return apiClient.put('/profile', profileData);
-  }
+ 
+  
 };
 
