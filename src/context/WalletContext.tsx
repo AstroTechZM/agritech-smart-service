@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Transaction } from '@/src/types';
 import { api } from '@/src/services';
 import { LOGIC_CONSTANTS } from '@/src/constants';
+import { safeNumber } from '@/src/lib/utils';
 
 interface WalletContextType {
   balance: number;
@@ -24,7 +25,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         api.fetchWalletBalance(),
         api.fetchWalletTransactions()
       ]);
-      setBalance(bal);
+      setBalance(safeNumber(bal));
       setTransactions(txs);
     } catch (error) {
       console.error('Failed to fetch wallet data', error);

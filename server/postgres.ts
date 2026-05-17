@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, type PoolConfig } from 'pg';
 import {
   USERS,
   FARMERS,
@@ -17,7 +17,14 @@ if (!connectionString) {
   throw new Error('Missing DATABASE_URL for Postgres adapter');
 }
 
-const pool = new Pool({ connectionString });
+const poolConfig: PoolConfig = {
+  connectionString,
+  ssl: {
+    rejectUnauthorized: false
+  }
+};
+
+const pool = new Pool(poolConfig);
 
 const createTables = async () => {
   await pool.query(`

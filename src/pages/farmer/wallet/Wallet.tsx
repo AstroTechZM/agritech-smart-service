@@ -49,6 +49,8 @@ export const Wallet = ({ user }: WalletProps) => {
   const { balance, transactions, isLoading, addTransaction } = useWallet();
   
   // Requirement III: Ensure balance reflects admin-approved payments
+  const safeBalance = Number.isFinite(balance) ? balance : 0;
+  const formattedBalance = safeBalance.toLocaleString(undefined, { minimumFractionDigits: 2 });
   const totalEarned = transactions
     .filter(t => (t.type === 'PAYOUT' || t.type === 'CREDIT' || t.type === 'DEPOSIT') && t.status === 'COMPLETED')
     .reduce((acc, t) => acc + t.amount, 0);
@@ -112,7 +114,7 @@ export const Wallet = ({ user }: WalletProps) => {
             {isLoading ? (
               <Skeleton width="16rem" height="3rem" baseColor="rgba(255,255,255,0.2)" highlightColor="rgba(255,255,255,0.4)" />
             ) : (
-              <h3 className="text-5xl font-black font-headline">ZMW {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+              <h3 className="text-5xl font-black font-headline">ZMW {formattedBalance}</h3>
             )}
             <div className="flex gap-8 border-t border-white/10 pt-6">
               <div>

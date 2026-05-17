@@ -28,6 +28,9 @@ export const FarmerDashboard = ({ user }: FarmerDashboardProps) => {
 
   const isLoading = isWalletLoading || isInsightsLoading || isVouchersLoading || isDeliveriesLoading;
 
+  const safeBalance = Number.isFinite(balance) ? balance : 0;
+  const formattedBalance = safeBalance.toLocaleString(undefined, { minimumFractionDigits: 2 });
+
   // Get the latest insight and voucher
   const latestInsight = insights?.[0];
   const voucherList = safeArray(vouchers);
@@ -57,7 +60,7 @@ export const FarmerDashboard = ({ user }: FarmerDashboardProps) => {
                 <Skeleton height="100%" baseColor="#ffffff" highlightColor="#ffffff80" />
               </div>
             ) : (
-              <h3 className="text-5xl font-black font-headline">ZMW {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+              <h3 className="text-5xl font-black font-headline">ZMW {formattedBalance}</h3>
             )}
             <button
               onClick={() => navigate('/wallet')}
