@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Ticket, QrCode, Map as MapIcon, X, Navigation, Locate } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/src/lib/utils';
+import { cn, safeArray } from '@/src/lib/utils';
 import { UserRole } from '@/src/types';
 import { useApi } from '@/src/hooks/useApi';
 import { api } from '@/src/services';
@@ -23,6 +23,7 @@ export const Vouchers = ({ role }: VouchersProps) => {
   const [userLocation, setUserLocation] = useState<{ x: number; y: number } | null>(null);
 
   const { data: vouchers, isLoading } = useApi(api.fetchVouchers);
+  const voucherList = safeArray(vouchers);
 
   // Simulated dealers data for the map
   const dealers = [
@@ -80,8 +81,8 @@ export const Vouchers = ({ role }: VouchersProps) => {
         <div className="bg-surface-container-lowest p-8 rounded-[2.5rem] border border-black/5 shadow-sm">
           {isLoading ? (
             <div className="h-64 bg-surface-container-low rounded-3xl animate-pulse" />
-          ) : vouchers && vouchers.length > 0 ? (() => {
-            const activeVoucher = vouchers.find(v => v.status === 'ACTIVE') || vouchers[0];
+          ) : voucherList.length > 0 ? (() => {
+            const activeVoucher = voucherList.find(v => v.status === 'ACTIVE') || voucherList[0];
             return (
               <div className="bg-surface-container-low p-6 rounded-3xl border border-primary/10 relative overflow-hidden">
                 <div className="relative z-10">
@@ -146,7 +147,7 @@ export const Vouchers = ({ role }: VouchersProps) => {
         <h3 className="text-lg font-bold font-headline px-1">Voucher History</h3>
         <DataTable 
           columns={columns}
-          data={vouchers || []}
+          data={voucherList}
           isLoading={isLoading}
           rowKey={(v) => v.id}
           emptyMessage="No voucher history found."

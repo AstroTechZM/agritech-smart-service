@@ -6,7 +6,7 @@ import { api } from '@/src/services';
 import { useWallet } from '@/src/context/WalletContext';
 import { LOGIC_CONSTANTS, MOCK_DEFAULTS } from '@/src/constants';
 import { User } from '@/src/types';
-import { cn } from '@/src/lib/utils';
+import { cn, safeArray } from '@/src/lib/utils';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
@@ -30,7 +30,8 @@ export const FarmerDashboard = ({ user }: FarmerDashboardProps) => {
 
   // Get the latest insight and voucher
   const latestInsight = insights?.[0];
-  const activeVoucher = vouchers?.find(v => v.status === 'ACTIVE') || vouchers?.[0];
+  const voucherList = safeArray(vouchers);
+  const activeVoucher = voucherList.find(v => v.status === 'ACTIVE') || voucherList[0];
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

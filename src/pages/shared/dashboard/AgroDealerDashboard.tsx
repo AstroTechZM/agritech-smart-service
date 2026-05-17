@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { QrCode, CheckCircle2, Wallet, AlertTriangle, X, Camera, Loader2, Sparkles } from 'lucide-react';
-import { cn } from '@/src/lib/utils';
+import { cn, safeArray } from '@/src/lib/utils';
 import { User } from '@/src/types';
 import { MOCK_DEFAULTS } from '@/src/constants';
 import { useApi } from '@/src/hooks/useApi';
@@ -21,9 +21,11 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
   const { data: stockItems, isLoading: isLoadingStock } = useApi(api.fetchStock);
   const { data: redemptions, setData: setRedemptions, isLoading: isLoadingRedemptions } = useApi(api.fetchRedemptions);
 
-  const totalRedemptions = (redemptions || []).length;
-  const pendingClaims = (redemptions || []).reduce((sum, r) => sum + r.amount, 0);
-  const lowStockCount = (stockItems || []).filter(i => i.status === 'LOW').length;
+  const stockList = safeArray(stockItems);
+  const redemptionsList = safeArray(redemptions);
+  const totalRedemptions = redemptionsList.length;
+  const pendingClaims = redemptionsList.reduce((sum, r) => sum + r.amount, 0);
+  const lowStockCount = stockList.filter(i => i.status === 'LOW').length;
 
   const handleRedeemSuccess = () => {
     setRedemptionStep('SUCCESS');
@@ -41,8 +43,8 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
     }
 
     // Deduct stock (2 packs of Maize Seed)
-    if (stockItems) {
-        const updatedStock = stockItems.map(item => {
+    if (stockList.length > 0) {
+        const updatedStock = stockList.map(item => {
             if (item.name.toLowerCase().includes('maize seed')) {
                 const newQty = Math.max(0, item.qty - 2);
                 return { ...item, qty: newQty, status: newQty < 50 ? 'LOW' : 'STABLE' };
@@ -55,7 +57,7 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
             // Since MOCK_STOCK is a shared object in mockData.ts, updating the object directly is one way,
             // but useApi needs to know about it.
             // Actually, let's update the mock data directly so it persists across pages in the session.
-            const target = stockItems.find(i => i.name.toLowerCase().includes('maize seed'));
+            const target = stockList.find(i => i.name.toLowerCase().includes('maize seed'));
             if (target) {
                 target.qty = Math.max(0, target.qty - 2);
                 target.status = target.qty < 50 ? 'LOW' : 'STABLE';
@@ -141,7 +143,7 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
                     </tr>
                   ))
                 ) : (
-                  (stockItems || []).map((item) => (
+                  stockList.map((item) => (
                     <tr key={item.name}>
                       <td className="px-6 py-4 font-bold text-sm">{item.name}</td>
                       <td className="px-6 py-4 text-xs font-medium">{item.qty} {item.unit}</td>
