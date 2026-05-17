@@ -1,4 +1,3 @@
-// client/pages/shared/dashboard/Dashboard.tsx
 import React from 'react';
 import { UserRole, User } from '@/types';
 import FarmerDashboard from './FarmerDashboard';
@@ -15,15 +14,14 @@ export const Dashboard = ({ user }: DashboardProps) => {
     case UserRole.FARMER:
       return <FarmerDashboard user={user} />;
     case UserRole.AGRO_DEALER:
-      return <AgroDealerDashboard />;
+      return <AgroDealerDashboard user={user} />;
     case UserRole.AGENT:
-      return <AgentDashboard />;
+      return <AgentDashboard user={user} />;
     case UserRole.ADMIN:
-      return <AdminDashboard />;
+      return <AdminDashboard user={user} />;
     default:
       return <FarmerDashboard user={user} />;
   }
 };
 
 export default Dashboard;
-
