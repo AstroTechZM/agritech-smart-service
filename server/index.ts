@@ -29,6 +29,7 @@ const {
 const app = (express as any)();
 app.use(json());
 
+// CORS Middleware
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
@@ -37,6 +38,15 @@ app.use((req, res, next) => {
 });
 
 const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+// Root Health Check Route for Render Deployment Health Monitor
+app.get('/', (_req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    service: 'FRA Backend Platform',
+    timestamp: new Date().toISOString()
+  });
+});
 
 app.get('/api/v1/ping', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -207,6 +217,7 @@ app.get('/api/v1/inventory', (_req, res) => {
 });
 
 const port = Number(process.env.PORT || 4000);
-app.listen(port, () => {
-  console.log(`FRA backend server listening on http://localhost:${port}`);
+// Bound explicitly to '0.0.0.0' interface for external visibility on Render virtualization network
+app.listen(port, '0.0.0.0', () => {
+  console.log(`FRA backend server listening on port ${port}`);
 });
