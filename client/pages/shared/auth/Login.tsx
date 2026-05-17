@@ -127,7 +127,7 @@ export const Login = ({ onLogin }: LoginProps) => {
           </div>
 
           <button 
-            onClick={() => navigate('/registration')}
+            onClick={() => navigate('/register')}
             className="w-full bg-tertiary text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-tertiary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
             Register My Farm
