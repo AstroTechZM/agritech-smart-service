@@ -28,11 +28,11 @@ const DISTRICTS_BY_PROVINCE: Record<string, string[]> = {
   Lusaka:          ['Lusaka', 'Chilanga', 'Chongwe', 'Kafue', 'Luangwa', 'Rufunsa'],
   Southern:        ['Choma', 'Livingstone', 'Mazabuka', 'Monze', 'Kalomo', 'Namwala', 'Siavonga'],
   Northern:        ['Kasama', 'Mbala', 'Mpika', 'Nakonde', 'Mporokoso', 'Kaputa'],
-  Eastern:         ['Chipata', 'Katete', 'Lundazi', 'Petauke', 'Nyimba', 'Mambwe'],
+  Eastern:         ['Chipata', 'Katete', 'Lundazi', 'Petauke', 'Nyimba', 'Mambwe', 'Sinda'],
   Copperbelt:      ['Kitwe', 'Ndola', 'Chingola', 'Mufulira', 'Luanshya', 'Kalulushi'],
   Central:         ['Kabwe', 'Kapiri Mposhi', 'Mkushi', 'Serenje', 'Chibombo'],
   Western:         ['Mongu', 'Senanga', 'Kaoma', 'Lukulu', 'Shangombo'],
-  Luapula:         ['Mansa', 'Nchelenge', 'Kawambwa', 'Samfya', 'Mwense'],
+  Luapula:         ['Mansa', 'Nchelenge', 'Kawambwa', 'Samfya', 'Mwense', 'Chienge'],
   Muchinga:        ['Chinsali', 'Isoka', 'Mpika', 'Shiwangandu', 'Kanchibiya'],
   'North-Western': ['Solwezi', 'Kasempa', 'Mwinilunga', 'Chavuma', 'Kabompo'],
 };
