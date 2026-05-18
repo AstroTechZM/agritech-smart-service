@@ -1,10 +1,11 @@
 // client/pages/shared/auth/Registration.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Landmark, User, MapPin, Sprout, Lock, CheckCircle2,
-  ArrowLeft, ArrowRight, Loader2, Eye, EyeOff, IdCard, QrCode, Copy,
+  ArrowLeft, ArrowRight, Loader2, Eye, EyeOff, IdCard,
+  QrCode, Copy, Camera, Upload, Pen, Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole } from '@/types';
@@ -24,16 +25,16 @@ const ZAMBIA_PROVINCES = [
 ];
 
 const DISTRICTS_BY_PROVINCE: Record<string, string[]> = {
-  Lusaka:           ['Lusaka', 'Chilanga', 'Chongwe', 'Kafue', 'Luangwa', 'Rufunsa'],
-  Southern:         ['Choma', 'Livingstone', 'Mazabuka', 'Monze', 'Kalomo', 'Namwala', 'Siavonga'],
-  Northern:         ['Kasama', 'Mbala', 'Mpika', 'Nakonde', 'Mporokoso', 'Kaputa'],
-  Eastern:          ['Chipata', 'Katete', 'Lundazi', 'Petauke', 'Nyimba', 'Mambwe'],
-  Copperbelt:       ['Kitwe', 'Ndola', 'Chingola', 'Mufulira', 'Luanshya', 'Kalulushi'],
-  Central:          ['Kabwe', 'Kapiri Mposhi', 'Mkushi', 'Serenje', 'Chibombo'],
-  Western:          ['Mongu', 'Senanga', 'Kaoma', 'Lukulu', 'Shangombo'],
-  Luapula:          ['Mansa', 'Nchelenge', 'Kawambwa', 'Samfya', 'Mwense'],
-  Muchinga:         ['Chinsali', 'Isoka', 'Mpika', 'Shiwangandu', 'Kanchibiya'],
-  'North-Western':  ['Solwezi', 'Kasempa', 'Mwinilunga', 'Chavuma', 'Kabompo'],
+  Lusaka:          ['Lusaka', 'Chilanga', 'Chongwe', 'Kafue', 'Luangwa', 'Rufunsa'],
+  Southern:        ['Choma', 'Livingstone', 'Mazabuka', 'Monze', 'Kalomo', 'Namwala', 'Siavonga'],
+  Northern:        ['Kasama', 'Mbala', 'Mpika', 'Nakonde', 'Mporokoso', 'Kaputa'],
+  Eastern:         ['Chipata', 'Katete', 'Lundazi', 'Petauke', 'Nyimba', 'Mambwe'],
+  Copperbelt:      ['Kitwe', 'Ndola', 'Chingola', 'Mufulira', 'Luanshya', 'Kalulushi'],
+  Central:         ['Kabwe', 'Kapiri Mposhi', 'Mkushi', 'Serenje', 'Chibombo'],
+  Western:         ['Mongu', 'Senanga', 'Kaoma', 'Lukulu', 'Shangombo'],
+  Luapula:         ['Mansa', 'Nchelenge', 'Kawambwa', 'Samfya', 'Mwense'],
+  Muchinga:        ['Chinsali', 'Isoka', 'Mpika', 'Shiwangandu', 'Kanchibiya'],
+  'North-Western': ['Solwezi', 'Kasempa', 'Mwinilunga', 'Chavuma', 'Kabompo'],
 };
 
 const CROPS_LIST = [
@@ -45,56 +46,165 @@ const CROPS_LIST = [
 
 // ─── ID Generation ────────────────────────────────────────────────────────────
 
-/**
- * Generates a unique FRA Farmer ID:
- * Format: FRA/{DISTRICT_CODE}/{YEAR}/{SEQUENCE}
- * Example: FRA/LSK/2026/4821
- *
- * - District code: first 3 letters of district, uppercase
- * - Year: current year
- * - Sequence: 4-digit number — checks localStorage to avoid collisions
- */
 const generateFarmerID = (district: string): string => {
   const districtCode = district.slice(0, 3).toUpperCase();
   const year = new Date().getFullYear();
-
-  // Pull existing sequences for this district+year from localStorage
   const storageKey = `fra_seq_${districtCode}_${year}`;
   const lastSeq = parseInt(localStorage.getItem(storageKey) || '1000', 10);
   const nextSeq = lastSeq + 1;
   localStorage.setItem(storageKey, String(nextSeq));
-
   return `FRA/${districtCode}/${year}/${nextSeq}`;
 };
 
-// ─── Step Definitions ─────────────────────────────────────────────────────────
+// ─── Steps ────────────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { id: 1, label: 'Personal', icon: User    },
-  { id: 2, label: 'Location', icon: MapPin  },
-  { id: 3, label: 'Farm',     icon: Sprout  },
-  { id: 4, label: 'Security', icon: Lock    },
-  { id: 5, label: 'ID Card',  icon: IdCard  },
+  { id: 1, label: 'Personal',  icon: User   },
+  { id: 2, label: 'Location',  icon: MapPin  },
+  { id: 3, label: 'Farm',      icon: Sprout  },
+  { id: 4, label: 'Security',  icon: Lock    },
+  { id: 5, label: 'Signature', icon: Pen     },
+  { id: 6, label: 'ID Card',   icon: IdCard  },
 ];
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Signature Canvas ─────────────────────────────────────────────────────────
+
+interface SignatureCanvasProps {
+  onSave: (dataUrl: string) => void;
+  savedSignature: string;
+}
+
+const SignatureCanvas = ({ onSave, savedSignature }: SignatureCanvasProps) => {
+  const canvasRef  = useRef<HTMLCanvasElement>(null);
+  const isDrawing  = useRef(false);
+  const lastPos    = useRef<{ x: number; y: number } | null>(null);
+  const hasStrokes = useRef(false);
+
+  useEffect(() => {
+    if (savedSignature && canvasRef.current) {
+      const img = new Image();
+      img.onload = () => canvasRef.current?.getContext('2d')?.drawImage(img, 0, 0);
+      img.src = savedSignature;
+      hasStrokes.current = true;
+    }
+  }, []);
+
+  const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    if ('touches' in e) {
+      return {
+        x: (e.touches[0].clientX - rect.left) * scaleX,
+        y: (e.touches[0].clientY - rect.top)  * scaleY,
+      };
+    }
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top)  * scaleY,
+    };
+  };
+
+  const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    isDrawing.current = true;
+    lastPos.current   = getPos(e, canvas);
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!isDrawing.current || !canvasRef.current || !lastPos.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+    const pos = getPos(e, canvasRef.current);
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth   = 2.5;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.stroke();
+    lastPos.current    = pos;
+    hasStrokes.current = true;
+  };
+
+  const stopDraw = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    if (!isDrawing.current) return;
+    isDrawing.current = false;
+    lastPos.current   = null;
+    if (canvasRef.current && hasStrokes.current) {
+      onSave(canvasRef.current.toDataURL('image/png'));
+    }
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
+    hasStrokes.current = false;
+    onSave('');
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="relative bg-white border-2 border-dashed border-neutral-300 rounded-2xl overflow-hidden touch-none">
+        <canvas
+          ref={canvasRef}
+          width={600}
+          height={200}
+          className="w-full h-40 cursor-crosshair"
+          onMouseDown={startDraw}
+          onMouseMove={draw}
+          onMouseUp={stopDraw}
+          onMouseLeave={stopDraw}
+          onTouchStart={startDraw}
+          onTouchMove={draw}
+          onTouchEnd={stopDraw}
+        />
+        <div className="absolute bottom-8 left-8 right-8 border-b border-neutral-200 pointer-events-none" />
+        <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-neutral-300 uppercase tracking-widest pointer-events-none whitespace-nowrap">
+          Sign above the line
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={clearCanvas}
+        className="flex items-center gap-2 text-[10px] font-bold text-error/70 hover:text-error uppercase tracking-widest transition-colors"
+      >
+        <Trash2 size={12} /> Clear Signature
+      </button>
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const Registration = ({ onLogin }: RegistrationProps) => {
-  const navigate = useNavigate();
+  const navigate   = useNavigate();
   const { addFarmer } = useFarmers();
 
-  const [step, setStep]               = useState(1);
+  // Two separate file inputs — one locks to camera, one opens gallery
+  const cameraInputRef  = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const [step, setStep]                 = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPin, setShowPin]         = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [done, setDone]               = useState(false);
-  const [generatedID, setGeneratedID] = useState('');
+  const [showPin, setShowPin]           = useState(false);
+  const [showConfirm, setShowConfirm]   = useState(false);
+  const [done, setDone]                 = useState(false);
+  const [generatedID, setGeneratedID]   = useState('');
 
   const [form, setForm] = useState({
-    firstName: '', lastName: '',  nrc: '',  gender: '', dob: '', phone: '',
-    province: '', district: '',   camp: '',  gps: '',
-    farmSize: '', landType: '',   crops: [] as string[],
-    pin: '',      confirmPin: '',
+    firstName: '', lastName: '', nrc: '', gender: '', dob: '', phone: '',
+    province: '', district: '', camp: '', gps: '',
+    farmSize: '', landType: '', crops: [] as string[],
+    pin: '', confirmPin: '',
+    photo: '',     // base64
+    signature: '', // base64
   });
 
   const set = (field: string, value: any) =>
@@ -103,17 +213,31 @@ const Registration = ({ onLogin }: RegistrationProps) => {
   const toggleCrop = (crop: string) =>
     set('crops', form.crops.includes(crop)
       ? form.crops.filter((c) => c !== crop)
-      : [...form.crops, crop]
-    );
+      : [...form.crops, crop]);
 
-  // Generate ID automatically when entering Step 5
+  // Generate ID when entering Step 6
   useEffect(() => {
-    if (step === 5 && !generatedID) {
+    if (step === 6 && !generatedID) {
       setGeneratedID(generateFarmerID(form.district));
     }
   }, [step]);
 
-  // ── Validation ──────────────────────────────────────────────────────────────
+  // ── Photo handler (shared by both inputs) ──────────────────────────────────
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => set('photo', ev.target?.result as string);
+    reader.readAsDataURL(file);
+    // Reset input so same file can be selected again if needed
+    e.target.value = '';
+  };
+
+  // ── Validation ─────────────────────────────────────────────────────────────
   const validate = (): string | null => {
     if (step === 1) {
       if (!form.firstName.trim()) return 'First name is required.';
@@ -122,17 +246,20 @@ const Registration = ({ onLogin }: RegistrationProps) => {
       if (!form.gender)           return 'Please select your gender.';
     }
     if (step === 2) {
-      if (!form.province)       return 'Please select your province.';
-      if (!form.district)       return 'Please select your district.';
-      if (!form.camp.trim())    return 'Camp / constituency is required.';
+      if (!form.province)    return 'Please select your province.';
+      if (!form.district)    return 'Please select your district.';
+      if (!form.camp.trim()) return 'Camp / constituency is required.';
     }
     if (step === 3) {
-      if (!form.farmSize)           return 'Please enter your farm size.';
-      if (form.crops.length === 0)  return 'Select at least one crop.';
+      if (!form.farmSize)          return 'Please enter your farm size.';
+      if (form.crops.length === 0) return 'Select at least one crop.';
     }
     if (step === 4) {
-      if (form.pin.length < 4)         return 'PIN must be at least 4 digits.';
+      if (form.pin.length < 4)          return 'PIN must be at least 4 digits.';
       if (form.pin !== form.confirmPin) return 'PINs do not match.';
+    }
+    if (step === 5) {
+      if (!form.signature) return 'Please provide your signature before continuing.';
     }
     return null;
   };
@@ -145,7 +272,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
 
   const handleBack = () => setStep((s) => s - 1);
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
@@ -159,19 +286,22 @@ const Registration = ({ onLogin }: RegistrationProps) => {
         farmSize:  form.farmSize,
         gps:       form.gps || undefined,
         crops:     form.crops,
-        farmerID:  generatedID,           // persist the generated ID
+        farmerID:  generatedID,
+        photo:     form.photo     || undefined,
+        signature: form.signature || undefined,
       };
 
       await addFarmer(farmer as any);
 
       onLogin({
-        id:         generatedID,           // use generated ID as system ID
+        id:         generatedID,
         name:       `${farmer.firstName} ${farmer.lastName}`,
         first_name: farmer.firstName,
         role:       UserRole.FARMER,
         nrc:        farmer.nrc,
         district:   farmer.district,
         email:      `${farmer.firstName.toLowerCase()}@example.zm`,
+        avatar:     farmer.photo || undefined,
         farmerID:   generatedID,
       });
 
@@ -185,7 +315,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
     }
   };
 
-  // ── Success screen ──────────────────────────────────────────────────────────
+  // ── Success Screen ─────────────────────────────────────────────────────────
   if (done) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center p-4">
@@ -194,9 +324,17 @@ const Registration = ({ onLogin }: RegistrationProps) => {
           animate={{ scale: 1, opacity: 1 }}
           className="text-center space-y-6"
         >
-          <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-primary/30">
-            <CheckCircle2 size={48} className="text-white" />
-          </div>
+          {form.photo ? (
+            <img
+              src={form.photo}
+              alt="Farmer"
+              className="w-24 h-24 rounded-full object-cover mx-auto border-4 border-primary shadow-2xl shadow-primary/30"
+            />
+          ) : (
+            <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-primary/30">
+              <CheckCircle2 size={48} className="text-white" />
+            </div>
+          )}
           <div>
             <h2 className="text-3xl font-black font-headline text-primary">
               Registration Complete!
@@ -221,7 +359,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
     );
   }
 
-  // ── Main form ───────────────────────────────────────────────────────────────
+  // ── Main Form ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-4 py-10">
       <motion.div
@@ -243,24 +381,24 @@ const Registration = ({ onLogin }: RegistrationProps) => {
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-between mb-8 px-2">
+        <div className="flex items-center justify-between mb-8 px-1">
           {STEPS.map((s, i) => {
-            const Icon      = s.icon;
-            const active    = step === s.id;
-            const complete  = step > s.id;
+            const Icon     = s.icon;
+            const active   = step === s.id;
+            const complete = step > s.id;
             return (
               <React.Fragment key={s.id}>
                 <div className="flex flex-col items-center gap-1">
                   <div className={cn(
-                    'w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300',
-                    complete ? 'bg-primary text-white shadow-lg shadow-primary/20' :
-                    active   ? 'bg-primary/10 text-primary ring-2 ring-primary' :
-                               'bg-surface-container-low text-neutral-400'
+                    'w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300',
+                    complete ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                    : active ? 'bg-primary/10 text-primary ring-2 ring-primary'
+                             : 'bg-surface-container-low text-neutral-400'
                   )}>
-                    {complete ? <CheckCircle2 size={18} /> : <Icon size={18} />}
+                    {complete ? <CheckCircle2 size={16} /> : <Icon size={16} />}
                   </div>
                   <span className={cn(
-                    'text-[9px] font-black uppercase tracking-widest',
+                    'text-[8px] font-black uppercase tracking-widest hidden sm:block',
                     active || complete ? 'text-primary' : 'text-neutral-400'
                   )}>
                     {s.label}
@@ -277,7 +415,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
           })}
         </div>
 
-        {/* Form Card */}
+        {/* Card */}
         <div className="bg-surface-container-lowest rounded-[2.5rem] border border-black/5 shadow-2xl overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.div
@@ -289,51 +427,163 @@ const Registration = ({ onLogin }: RegistrationProps) => {
               className="p-8"
             >
 
-              {/* ── STEP 1: Personal ─────────────────────────────────────── */}
+              {/* ═══════════════════════════════════════════════════════════
+                  STEP 1 — Personal Details + Photo Capture
+              ═══════════════════════════════════════════════════════════ */}
               {step === 1 && (
                 <div className="space-y-5">
                   <StepHeading
                     title="Personal Details"
                     sub="Your official information as it appears on your NRC."
                   />
+
+                  {/* ── Photo Section ── */}
+                  <div className="bg-surface-container-low rounded-[1.5rem] p-5 space-y-4 border border-black/5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                      Profile Photo
+                    </p>
+
+                    {/* Preview */}
+                    <div className="flex justify-center">
+                      {form.photo ? (
+                        <div className="relative">
+                          <img
+                            src={form.photo}
+                            alt="Profile preview"
+                            className="w-28 h-28 rounded-[1.5rem] object-cover border-4 border-white shadow-xl"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => set('photo', '')}
+                            className="absolute -top-2 -right-2 w-7 h-7 bg-error text-white rounded-full flex items-center justify-center shadow-md hover:bg-error/80 transition-colors"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-28 h-28 rounded-[1.5rem] bg-white border-2 border-dashed border-neutral-300 flex flex-col items-center justify-center text-neutral-300 gap-2">
+                          <User size={32} />
+                          <span className="text-[9px] font-bold uppercase tracking-widest">
+                            No Photo
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── TWO HIDDEN INPUTS ──
+                        cameraInputRef  → capture="user"  → opens front camera on mobile
+                        galleryInputRef → no capture attr  → opens file picker / gallery
+                    */}
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="user"
+                      className="hidden"
+                      onChange={handlePhotoChange}
+                    />
+                    <input
+                      ref={galleryInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoChange}
+                    />
+
+                    {/* ── TWO VISIBLE BUTTONS ── */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Button 1: Take Photo — triggers cameraInputRef */}
+                      <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="flex flex-col items-center gap-2 p-4 bg-primary/10 text-primary rounded-2xl hover:bg-primary/20 active:scale-95 transition-all border border-primary/10"
+                      >
+                        <Camera size={24} />
+                        <div className="text-center">
+                          <p className="text-[10px] font-black uppercase tracking-wide">
+                            Take Photo
+                          </p>
+                          <p className="text-[8px] font-medium opacity-60 mt-0.5">
+                            Opens device camera
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* Button 2: Upload — triggers galleryInputRef */}
+                      <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        className="flex flex-col items-center gap-2 p-4 bg-white text-neutral-600 rounded-2xl hover:bg-neutral-50 active:scale-95 transition-all border border-black/5 shadow-sm"
+                      >
+                        <Upload size={24} />
+                        <div className="text-center">
+                          <p className="text-[10px] font-black uppercase tracking-wide">
+                            Upload Photo
+                          </p>
+                          <p className="text-[8px] font-medium opacity-60 mt-0.5">
+                            From gallery or files
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+
+                    <p className="text-[9px] text-neutral-400 font-medium text-center">
+                      Optional — passport-style photo recommended
+                    </p>
+                  </div>
+
+                  {/* ── Personal Fields ── */}
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="First Name" required>
-                      <input value={form.firstName} onChange={(e) => set('firstName', e.target.value)}
+                      <input value={form.firstName}
+                        onChange={(e) => set('firstName', e.target.value)}
                         placeholder="e.g. Henry" className={inputCls} />
                     </Field>
                     <Field label="Last Name" required>
-                      <input value={form.lastName} onChange={(e) => set('lastName', e.target.value)}
+                      <input value={form.lastName}
+                        onChange={(e) => set('lastName', e.target.value)}
                         placeholder="e.g. Mate" className={inputCls} />
                     </Field>
                   </div>
+
                   <Field label="NRC Number" required hint="Format: 000000/00/1">
-                    <input value={form.nrc} onChange={(e) => set('nrc', e.target.value)}
+                    <input value={form.nrc}
+                      onChange={(e) => set('nrc', e.target.value)}
                       placeholder="852016/10/1" className={inputCls} />
                   </Field>
+
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="Gender" required>
-                      <select value={form.gender} onChange={(e) => set('gender', e.target.value)} className={inputCls}>
+                      <select value={form.gender}
+                        onChange={(e) => set('gender', e.target.value)}
+                        className={inputCls}>
                         <option value="">Select…</option>
                         <option>Male</option>
                         <option>Female</option>
                       </select>
                     </Field>
                     <Field label="Date of Birth">
-                      <input type="date" value={form.dob} onChange={(e) => set('dob', e.target.value)}
+                      <input type="date" value={form.dob}
+                        onChange={(e) => set('dob', e.target.value)}
                         className={inputCls} />
                     </Field>
                   </div>
+
                   <Field label="Phone Number">
-                    <input value={form.phone} onChange={(e) => set('phone', e.target.value)}
+                    <input value={form.phone}
+                      onChange={(e) => set('phone', e.target.value)}
                       placeholder="097 000 0000" className={inputCls} />
                   </Field>
                 </div>
               )}
 
-              {/* ── STEP 2: Location ─────────────────────────────────────── */}
+              {/* ═══════════════════════════════════════════════════════════
+                  STEP 2 — Location Details
+              ═══════════════════════════════════════════════════════════ */}
               {step === 2 && (
                 <div className="space-y-5">
                   <StepHeading title="Location Details" sub="Where is your farm located?" />
+
                   <Field label="Province" required>
                     <select value={form.province}
                       onChange={(e) => { set('province', e.target.value); set('district', ''); }}
@@ -342,22 +592,31 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                       {ZAMBIA_PROVINCES.map((p) => <option key={p}>{p}</option>)}
                     </select>
                   </Field>
+
                   <Field label="District" required>
-                    <select value={form.district} onChange={(e) => set('district', e.target.value)}
+                    <select value={form.district}
+                      onChange={(e) => set('district', e.target.value)}
                       disabled={!form.province}
                       className={cn(inputCls, !form.province && 'opacity-50 cursor-not-allowed')}>
                       <option value="">Select District…</option>
-                      {(DISTRICTS_BY_PROVINCE[form.province] || []).map((d) => <option key={d}>{d}</option>)}
+                      {(DISTRICTS_BY_PROVINCE[form.province] || []).map((d) => (
+                        <option key={d}>{d}</option>
+                      ))}
                     </select>
                   </Field>
+
                   <Field label="Camp / Constituency / Block" required>
-                    <input value={form.camp} onChange={(e) => set('camp', e.target.value)}
+                    <input value={form.camp}
+                      onChange={(e) => set('camp', e.target.value)}
                       placeholder="e.g. Central Camp" className={inputCls} />
                   </Field>
-                  <Field label="GPS Coordinates" hint="Optional — tap to auto-detect">
+
+                  <Field label="GPS Coordinates" hint="Optional — tap icon to detect">
                     <div className="flex gap-2">
-                      <input value={form.gps} onChange={(e) => set('gps', e.target.value)}
-                        placeholder="-13.1234, 28.4567" className={cn(inputCls, 'flex-1')} />
+                      <input value={form.gps}
+                        onChange={(e) => set('gps', e.target.value)}
+                        placeholder="-13.1234, 28.4567"
+                        className={cn(inputCls, 'flex-1')} />
                       <button type="button"
                         onClick={() => {
                           if (!navigator.geolocation) { toast.error('GPS not available.'); return; }
@@ -369,7 +628,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                             () => toast.error('Could not access GPS.')
                           );
                         }}
-                        className="px-4 bg-primary/10 text-primary rounded-2xl font-bold text-xs hover:bg-primary/20 transition-colors">
+                        className="px-4 bg-primary/10 text-primary rounded-2xl hover:bg-primary/20 transition-colors">
                         <MapPin size={16} />
                       </button>
                     </div>
@@ -377,10 +636,13 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                 </div>
               )}
 
-              {/* ── STEP 3: Farm ─────────────────────────────────────────── */}
+              {/* ═══════════════════════════════════════════════════════════
+                  STEP 3 — Farm Details
+              ═══════════════════════════════════════════════════════════ */}
               {step === 3 && (
                 <div className="space-y-5">
                   <StepHeading title="Farm Details" sub="Tell us about your farming operation." />
+
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="Farm Size (Ha)" required>
                       <input type="number" step="0.1" min="0.1" value={form.farmSize}
@@ -388,7 +650,8 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                         placeholder="e.g. 2.5" className={inputCls} />
                     </Field>
                     <Field label="Land Ownership">
-                      <select value={form.landType} onChange={(e) => set('landType', e.target.value)}
+                      <select value={form.landType}
+                        onChange={(e) => set('landType', e.target.value)}
                         className={inputCls}>
                         <option value="">Select…</option>
                         <option>Owned</option>
@@ -398,6 +661,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                       </select>
                     </Field>
                   </div>
+
                   <Field label="Crops Grown" required hint="Select all that apply">
                     <div className="grid grid-cols-3 gap-2 mt-1">
                       {CROPS_LIST.map((crop) => {
@@ -424,10 +688,13 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                 </div>
               )}
 
-              {/* ── STEP 4: Security ─────────────────────────────────────── */}
+              {/* ═══════════════════════════════════════════════════════════
+                  STEP 4 — Security PIN
+              ═══════════════════════════════════════════════════════════ */}
               {step === 4 && (
                 <div className="space-y-5">
                   <StepHeading title="Set Your PIN" sub="You'll use this PIN to log in with your NRC number." />
+
                   <div className="bg-primary/5 border border-primary/10 rounded-2xl p-5 space-y-2">
                     <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-3">
                       Registration Summary
@@ -437,6 +704,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                     <SummaryRow label="District" value={`${form.district}, ${form.province}`} />
                     <SummaryRow label="Farm"     value={`${form.farmSize} Ha — ${form.crops.slice(0, 2).join(', ')}${form.crops.length > 2 ? ` +${form.crops.length - 2}` : ''}`} />
                   </div>
+
                   <Field label="Create PIN" required hint="4–6 digits">
                     <div className="relative">
                       <input type={showPin ? 'text' : 'password'}
@@ -450,6 +718,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                       </button>
                     </div>
                   </Field>
+
                   <Field label="Confirm PIN" required>
                     <div className="relative">
                       <input type={showConfirm ? 'text' : 'password'}
@@ -469,8 +738,47 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                 </div>
               )}
 
-              {/* ── STEP 5: Farmer ID Card ───────────────────────────────── */}
+              {/* ═══════════════════════════════════════════════════════════
+                  STEP 5 — Digital Signature
+              ═══════════════════════════════════════════════════════════ */}
               {step === 5 && (
+                <div className="space-y-5">
+                  <StepHeading
+                    title="Digital Signature"
+                    sub="Draw your signature using your finger or mouse."
+                  />
+
+                  <SignatureCanvas
+                    onSave={(dataUrl) => set('signature', dataUrl)}
+                    savedSignature={form.signature}
+                  />
+
+                  {form.signature && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-primary/5 border border-primary/10 rounded-2xl p-4"
+                    >
+                      <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-2">
+                        Signature Preview
+                      </p>
+                      <img src={form.signature} alt="Signature" className="max-h-16 object-contain" />
+                    </motion.div>
+                  )}
+
+                  <div className="bg-surface-container-low rounded-2xl p-4 border border-black/5">
+                    <p className="text-[10px] font-bold text-neutral-500 leading-relaxed">
+                      By signing, you confirm all information is accurate and consent to its use
+                      for agricultural support services under the Zambia Ministry of Agriculture.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ═══════════════════════════════════════════════════════════
+                  STEP 6 — Generated ID Card
+              ═══════════════════════════════════════════════════════════ */}
+              {step === 6 && (
                 <div className="space-y-6">
                   <StepHeading
                     title="Your Farmer ID"
@@ -484,16 +792,15 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                     transition={{ delay: 0.1 }}
                     className="primary-gradient rounded-[2rem] p-6 text-white shadow-2xl shadow-primary/30 relative overflow-hidden"
                   >
-                    {/* Card background decoration */}
                     <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
 
                     <div className="relative z-10">
                       {/* Card Header */}
-                      <div className="flex justify-between items-start mb-6">
+                      <div className="flex justify-between items-start mb-5">
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Landmark size={16} className="opacity-70" />
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Landmark size={14} className="opacity-70" />
                             <p className="text-[9px] font-black uppercase tracking-widest opacity-70">
                               Republic of Zambia
                             </p>
@@ -501,50 +808,76 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                           <p className="text-[10px] font-black uppercase tracking-widest opacity-80">
                             Ministry of Agriculture
                           </p>
-                          <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                          <p className="text-[9px] font-black uppercase tracking-widest opacity-60">
                             Farmer Registration Card
                           </p>
                         </div>
-                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                          <QrCode size={24} />
+                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                          <QrCode size={20} />
                         </div>
                       </div>
 
-                      {/* Farmer Name */}
-                      <div className="mb-4">
-                        <p className="text-[9px] font-bold uppercase opacity-60 mb-0.5">Full Name</p>
-                        <p className="text-xl font-black font-headline tracking-tight">
-                          {form.firstName} {form.lastName}
-                        </p>
+                      {/* Photo + Name */}
+                      <div className="flex items-center gap-4 mb-4">
+                        {form.photo ? (
+                          <img
+                            src={form.photo}
+                            alt="Farmer"
+                            className="w-16 h-16 rounded-xl object-cover border-2 border-white/30 shadow-lg shrink-0"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                            <User size={28} className="opacity-60" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-[9px] font-bold uppercase opacity-60 mb-0.5">Full Name</p>
+                          <p className="text-lg font-black font-headline leading-tight">
+                            {form.firstName} {form.lastName}
+                          </p>
+                          <p className="text-[9px] opacity-60 font-bold uppercase">{form.gender}</p>
+                        </div>
                       </div>
 
-                      {/* ID Number — prominent */}
-                      <div className="bg-white/15 backdrop-blur-sm rounded-2xl px-4 py-3 mb-4 border border-white/10">
-                        <p className="text-[9px] font-bold uppercase opacity-60 mb-1">Farmer ID</p>
-                        <p className="text-2xl font-black font-mono tracking-widest">
-                          {generatedID}
-                        </p>
+                      {/* Farmer ID — prominent */}
+                      <div className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-2.5 mb-4 border border-white/10">
+                        <p className="text-[9px] font-bold uppercase opacity-60 mb-0.5">Farmer ID</p>
+                        <p className="text-xl font-black font-mono tracking-widest">{generatedID}</p>
                       </div>
 
-                      {/* Card Footer Grid */}
-                      <div className="grid grid-cols-3 gap-3 text-[10px]">
+                      {/* Footer grid */}
+                      <div className="grid grid-cols-3 gap-3 text-[10px] mb-4">
                         <div>
                           <p className="opacity-60 font-bold uppercase mb-0.5">NRC</p>
-                          <p className="font-black">{form.nrc}</p>
+                          <p className="font-black text-[9px]">{form.nrc}</p>
                         </div>
                         <div>
                           <p className="opacity-60 font-bold uppercase mb-0.5">District</p>
                           <p className="font-black">{form.district}</p>
                         </div>
                         <div>
-                          <p className="opacity-60 font-bold uppercase mb-0.5">Farm Size</p>
+                          <p className="opacity-60 font-bold uppercase mb-0.5">Farm</p>
                           <p className="font-black">{form.farmSize} Ha</p>
                         </div>
                       </div>
+
+                      {/* Signature strip */}
+                      {form.signature && (
+                        <div className="border-t border-white/10 pt-3">
+                          <p className="text-[8px] font-bold uppercase opacity-50 mb-1">
+                            Farmer Signature
+                          </p>
+                          <img
+                            src={form.signature}
+                            alt="Signature"
+                            className="h-8 object-contain brightness-0 invert opacity-80"
+                          />
+                        </div>
+                      )}
                     </div>
                   </motion.div>
 
-                  {/* Copy ID button */}
+                  {/* Copy button */}
                   <button
                     type="button"
                     onClick={() => {
@@ -553,14 +886,14 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                     }}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-surface-container-low rounded-2xl text-xs font-bold text-primary hover:bg-primary/5 transition-colors border border-black/5"
                   >
-                    <Copy size={14} /> Copy Farmer ID: {generatedID}
+                    <Copy size={14} /> Copy ID: {generatedID}
                   </button>
 
-                  {/* Info note */}
                   <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4">
                     <p className="text-[10px] font-bold text-primary/80 leading-relaxed">
-                      <span className="font-black text-primary">Important:</span> Your Farmer ID is unique to you and cannot be changed. 
-                      Use your <span className="font-black">NRC number</span> to log in at any time.
+                      <span className="font-black text-primary">Important:</span> Use your{' '}
+                      <span className="font-black">NRC number</span> to log in at any time.
+                      Your Farmer ID is your unique government reference number.
                     </p>
                   </div>
                 </div>
@@ -569,7 +902,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Navigation */}
+          {/* Navigation Buttons */}
           <div className="px-8 pb-8 flex gap-3">
             <button
               onClick={step > 1 ? handleBack : () => navigate('/login')}
@@ -578,7 +911,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
               <ArrowLeft size={20} />
             </button>
 
-            {step < 5 ? (
+            {step < 6 ? (
               <button
                 onClick={handleNext}
                 className="flex-1 primary-gradient text-white py-4 rounded-2xl font-black font-headline text-base shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
