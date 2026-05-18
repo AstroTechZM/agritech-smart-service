@@ -1,4 +1,5 @@
 import { apiClient } from './api-client';
+import { Voucher, DepotStock } from '@/types';
 
 /**
  * STOCK & VOUCHER API SERVICE
@@ -11,7 +12,7 @@ export const stockApi = {
    * Returns current stock levels at the local depot.
    */
   fetchStock: async () => {
-    return apiClient.get('/inventory');
+    return apiClient.get<DepotStock[]>('/inventory');
   },
 
   /**
@@ -19,7 +20,7 @@ export const stockApi = {
    * Fetches active vouchers for the logged-in farmer.
    */
   fetchVouchers: async () => {
-    return apiClient.get('/vouchers');
+    return apiClient.get<Voucher[]>('/vouchers');
   },
 
   /**
@@ -27,7 +28,7 @@ export const stockApi = {
    * Processes a voucher PIN and initiates distribution.
    */
   redeemVoucher: async (pin: string) => {
-    return apiClient.post('/vouchers/redeem', { pin_code: pin });
+    return apiClient.post<{ success: boolean; voucher: Voucher }>('/vouchers/redeem', { pin_code: pin });
   },
 
   /**
@@ -35,7 +36,6 @@ export const stockApi = {
    * History of distributions for the current dealer.
    */
   fetchRedemptions: async () => {
-    return apiClient.get('/redemptions');
+    return apiClient.get<any[]>('/redemptions');
   }
 };
-

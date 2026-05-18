@@ -1,9 +1,10 @@
 import { apiClient } from './api-client';
+import { User, PaymentRecord, Shipment } from '@/types';
 
 export const adminApi = {
-  fetchAdminStats: async () => apiClient.get('/admin/stats'),
-  fetchPayments: async () => apiClient.get('/admin/payments'),
-  fetchShipments: async () => apiClient.get('/admin/shipments'),
-  approveAllPendingPayments: async () => apiClient.post('/admin/payments/approve-all'),
-  updateProfile: async (data: any) => apiClient.put('/profile', data),
+  fetchAdminStats: async () => apiClient.get<any>('/admin/stats'),
+  fetchPayments: async () => apiClient.get<PaymentRecord[]>('/admin/payments'),
+  fetchShipments: async () => apiClient.get<Shipment[]>('/admin/shipments'),
+  approveAllPendingPayments: async () => apiClient.post<{ success: boolean; approvedCount: number }>('/admin/payments/approve-all'),
+  updateProfile: async (data: Partial<User>) => apiClient.put<User>('/profile', data),
 };

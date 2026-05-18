@@ -1,4 +1,5 @@
 import { apiClient } from './api-client';
+import { Transaction } from '@/types';
 
 /**
  * WALLET API SERVICE
@@ -18,14 +19,13 @@ export const walletApi = {
    * GET /api/v1/wallet/transactions
    */
   fetchWalletTransactions: async () => {
-    return apiClient.get('/wallet/transactions');
+    return apiClient.get<Transaction[]>('/wallet/transactions');
   },
 
   /**
    * POST /api/v1/wallet/withdraw
    */
   postWithdrawal: async (amount: number, userId: string) => {
-    return apiClient.post('/wallet/withdraw', { user_id: userId, amount });
+    return apiClient.post<{ success: boolean; transaction: Transaction }>('/wallet/withdraw', { user_id: userId, amount });
   }
 };
-

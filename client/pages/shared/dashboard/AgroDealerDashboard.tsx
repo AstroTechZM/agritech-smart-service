@@ -18,8 +18,7 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redemptionStep, setRedemptionStep] = useState<'SCAN' | 'CONFIRM' | 'SUCCESS'>('SCAN');
   
-  const { data: stockItems, isLoading: isLoadingStock } = useApi(api.fetchStock);
-  const { data: redemptions, setData: setRedemptions, isLoading: isLoadingRedemptions } = useApi(api.fetchRedemptions);
+  const { data: stockItems, eggtData: setRedemptions, isLoading: isLoadingRedemptions } = useApi(api.fetchRedemptions);
 
   const stockList = safeArray(stockItems);
   const redemptionsList = safeArray(redemptions);
@@ -43,39 +42,8 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
     }
 
     // Deduct stock (2 packs of Maize Seed)
-    if (stockList.length > 0) {
-        const updatedStock = stockList.map(item => {
-            if (item.name.toLowerCase().includes('maize seed')) {
-                const newQty = Math.max(0, item.qty - 2);
-                return { ...item, qty: newQty, status: newQty < 50 ? 'LOW' : 'STABLE' };
-            }
-            return item;
-        });
-        api.fetchStock().then(() => { // Simulate API latency
-            // We use the setter from the hook if available, or just rely on local state if it's a shared ref
-            // In this app, stockItems is from useApi(api.fetchStock).
-            // Since MOCK_STOCK is a shared object in mockData.ts, updating the object directly is one way,
-            // but useApi needs to know about it.
-            // Actually, let's update the mock data directly so it persists across pages in the session.
-            const target = stockList.find(i => i.name.toLowerCase().includes('maize seed'));
-            if (target) {
-                target.qty = Math.max(0, target.qty - 2);
-                target.status = target.qty < 50 ? 'LOW' : 'STABLE';
-            }
-        });
-    }
-
-    toast.success('Voucher redeemed successfully! Stock updated.');
-    setTimeout(() => {
-      setIsRedeeming(false);
-      setRedemptionStep('SCAN');
-    }, 2000);
-  };
-
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-end">
-        <div>
+    if (stockItems && stockList.length > 0) {
+      const u(
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Agro-Dealer Portal</span>
           <h2 className="text-3xl font-black font-headline tracking-tight">{user?.name || 'Zambia Agro Hub Ltd'}</h2>
           <p className="text-sm text-neutral-500">License: AD-2024-991</p>
@@ -309,4 +277,3 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
 };
 
 export default AgroDealerDashboard;
-
