@@ -2,9 +2,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '@/services';
 
-// Mock fallback farmers — used when backend is not available
-import mockFarmersData from '@/data/users.json';
-
 interface Farmer {
   nrc: string;
   firstName: string;
@@ -39,15 +36,8 @@ const mapToFarmer = (f: any): Farmer => ({
   crops: f.crops || ['Maize'],
 });
 
-// Build fallback list from local JSON (only farmer-role entries)
-const FALLBACK_FARMERS: Farmer[] = Array.isArray(mockFarmersData)
-  ? mockFarmersData
-      .filter((u: any) => u.role === 'FARMER' || u.nrc)
-      .map(mapToFarmer)
-  : [];
-
 export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [farmers, setFarmers] = useState<Farmer[]>(FALLBACK_FARMERS);
+  const [farmers, setFarmers] = useState<Farmer[]>([]); // Start with empty array
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -56,10 +46,10 @@ export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIsLoading(true);
         const registeredFarmers = (await api.fetchFarmers()) as any[];
         setFarmers(registeredFarmers.map(mapToFarmer));
-      } catch {
-        // Backend not available — keep fallback data silently
+      } catch (error) {
+        // Log the error, but don't use fallback data anymore
         console.warn('[FarmerContext] Using mock farmer data (backend unavailable)');
-        setFarmers(FALLBACK_FARMERS);
+        setFarmers([]);
       } finally {
         setIsLoading(false);
       }
@@ -70,9 +60,9 @@ export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const addFarmer = async (farmer: Farmer) => {
     try {
-      await api.registerFarmer(farmer);
-    } catch {
-      // Backend unavailable — register locally only
+      await api.registerFarmer(farmer as any);
+    } catch (error) {
+      // Log the error, but don't register locally
       console.warn('[FarmerContext] Farmer saved locally (backend unavailable)');
     }
     setFarmers((prev) => [farmer, ...prev]);

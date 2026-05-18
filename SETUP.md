@@ -120,8 +120,8 @@ server/
 
 ## Next Steps
 
-1. **Add a real database** - Replace in-memory `server/data.ts` with PostgreSQL or MongoDB
-2. **Authentication** - Implement JWT tokens and session management
+1. **Service Layer Migration** - Continue moving domain logic from `postgres.ts` into dedicated services like `ProductionService`.
+2. **Zod Validation** - Implement strict input validation for all API endpoints to ensure data integrity.
 3. **Payment integration** - Add Stripe, MTN MoMo, or Airtel Money sandbox
 4. **Notifications** - Add email/SMS alerts via Twilio or SendGrid
 5. **Mobile app** - Build React Native or Flutter mobile client

@@ -5,14 +5,6 @@ import { api } from '@/services';
 import { LOGIC_CONSTANTS } from '@/constants';
 import { safeNumber } from '@/lib/utils';
 
-// Mock fallback data — used when backend is not available
-import mockTransactions from '@/data/transactions.json';
-
-const FALLBACK_BALANCE = 4850.00;
-const FALLBACK_TRANSACTIONS: Transaction[] = Array.isArray(mockTransactions)
-  ? (mockTransactions as Transaction[])
-  : [];
-
 interface WalletContextType {
   balance: number;
   transactions: Transaction[];
@@ -23,8 +15,8 @@ interface WalletContextType {
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [balance, setBalance] = useState<number>(FALLBACK_BALANCE);
-  const [transactions, setTransactions] = useState<Transaction[]>(FALLBACK_TRANSACTIONS);
+  const [balance, setBalance] = useState<number>(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchWalletData = async () => {
@@ -36,11 +28,10 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ]);
       setBalance(safeNumber(bal));
       setTransactions(txs as Transaction[]);
-    } catch {
-      // Backend not available — use mock data silently
-      console.warn('[WalletContext] Using mock wallet data (backend unavailable)');
-      setBalance(FALLBACK_BALANCE);
-      setTransactions(FALLBACK_TRANSACTIONS);
+    } catch (error) {
+      console.error('[WalletContext] Failed to fetch wallet data:', error);
+      setBalance(0);
+      setTransactions([]);
     } finally {
       setIsLoading(false);
     }

@@ -10,10 +10,10 @@ Render deployment notes
 
 Local testing:
 
-- To run Postgres locally and migrate, set `DATABASE_URL` and run:
+- The system is configured to use the onrender.com PostgreSQL database by default. For local testing, use the **External Connection String** from your Render dashboard:
 
 ```bash
-export DATABASE_URL="postgres://user:pass@localhost:5432/fra_dev"
+export DATABASE_URL="your-render-external-db-url"
 npm run backend:migrate
 npm run server
 ```

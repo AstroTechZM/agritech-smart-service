@@ -18,10 +18,6 @@ import { User } from '@/types';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
-// Mock fallbacks — used when backend is not available
-import mockDeliveries from '@/data/deliveries.json';
-import mockVouchers from '@/data/vouchers.json';
-
 interface FarmerDashboardProps {
   user: User | null;
 }
@@ -31,13 +27,11 @@ export const FarmerDashboard = ({ user }: FarmerDashboardProps) => {
   const { balance, isLoading: walletLoading } = useWallet();
 
   const { data: deliveries, isLoading: deliveriesLoading } = useApi(
-    api.fetchDeliveries,
-    { fallback: mockDeliveries }
+    api.fetchDeliveries
   );
 
   const { data: vouchers, isLoading: vouchersLoading } = useApi(
-    api.fetchVouchers,
-    { fallback: mockVouchers }
+    api.fetchVouchers
   );
 
   const lastDelivery = (deliveries as any[])?.[0] || null;

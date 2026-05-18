@@ -1,16 +1,11 @@
 import express from 'express';
 import { json } from 'express';
-import { ADMIN_STATS, DAILY_INTAKE } from './data';
-import * as sqlite from './db';
+import jwt from 'jsonwebtoken';
+import { authenticate, AuthRequest } from '../auth';
+import { ProductionService } from './production.service';
+import storage from './postgres';
 
-const loadStorage = async () => {
-  if (process.env.DATABASE_URL) {
-    return await import('./postgres');
-  }
-  return sqlite;
-};
-
-const storage: any = await loadStorage();
+const JWT_SECRET = process.env.JWT_SECRET || 'fra-super-secret-key';
 
 const {
   findUserByIdentifier,
@@ -28,8 +23,10 @@ const {
   getAdminStats,
   getProductionInsights,
   getDeliveryRecords,
-  getInventory,
-  updateUser
+  getInventory, // This will now fetch unit from DB
+  getFarmProductionRecords, // New function
+  updateUser,
+  getDailyIntakeSummary
 } = storage;
 
 const app = (express as any)();
@@ -47,8 +44,8 @@ const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toSt
 
 // Root Health Check Route for Render Deployment Health Monitor
 app.get('/', (_req, res) => {
-  res.status(200).json({ 
-    status: 'healthy', 
+  res.status(200).json({
+    status: 'healthy',
     service: 'FRA Backend Platform',
     timestamp: new Date().toISOString()
   });
@@ -66,14 +63,20 @@ app.post('/api/v1/auth/login', async (req, res) => {
     return res.status(401).json({ message: 'Invalid identifier' });
   }
 
-  return res.json({ user, token: `token-${makeId('AUTH')}` });
+  const token = jwt.sign(
+    { id: user.user_id, role: user.role, email: user.email },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  return res.json({ user, token });
 });
 
-app.get('/api/v1/farmers', async (_req, res) => {
+app.get('/api/v1/farmers', authenticate, async (_req, res) => {
   res.json(await getFarmers());
 });
 
-app.post('/api/v1/farmers/register', async (req, res) => {
+app.post('/api/v1/farmers/register', authenticate, async (req, res) => {
   const newFarmer = await createFarmer(req.body);
   return res.status(201).json(newFarmer);
 });
@@ -131,11 +134,7 @@ app.get('/api/v1/redemptions', async (_req, res) => {
 });
 
 app.get('/api/v1/admin/stats', async (_req, res) => {
-  const stats = await getAdminStats();
-  if (!stats) {
-    return res.status(404).json({ message: 'Admin stats not found' });
-  }
-  res.json(stats);
+  res.json(await getAdminStats()); // Now dynamically calculated
 });
 
 app.get('/api/v1/admin/payments', async (_req, res) => {
@@ -165,26 +164,15 @@ app.get('/api/v1/production/deliveries', async (_req, res) => {
 });
 
 app.get('/api/v1/production/records', async (_req, res) => {
-  const farmers = await getFarmers() as Array<any>;
-  res.json(farmers.map((farmer) => ({
-    id: farmer.farmer_id,
-    farmerId: farmer.farmer_id,
-    season: '2026 Season',
-    crop: 'Maize',
-    area: farmer.farm_size,
-    yield: farmer.farm_size * 600,
-    harvestDate: '2026-05-01',
-    status: 'HARVESTED',
-    notes: 'Harvest recorded at collection point'
-  })));
+  res.json(await getFarmProductionRecords()); // Now uses data from DB
 });
 
 app.get('/api/v1/production/insights', async (_req, res) => {
   res.json(await getProductionInsights());
 });
 
-app.get('/api/v1/production/intake', (_req, res) => {
-  res.json(DAILY_INTAKE);
+app.get('/api/v1/production/intake', async (_req, res) => {
+  res.json(await getDailyIntakeSummary());
 });
 
 app.post('/api/v1/production/intake', async (req, res) => {
@@ -193,34 +181,34 @@ app.post('/api/v1/production/intake', async (req, res) => {
     return res.status(400).json({ message: 'Missing intake data' });
   }
 
-  DAILY_INTAKE.bags += Math.ceil(weight / 50);
-  const pricePerKg = crop?.toLowerCase().includes('maize') ? 5.6 : 8.0;
-  const amount = Math.round(weight * pricePerKg);
+  try {
+    const result = await ProductionService.recordGrainIntake({ weight, nrc, farmerName, crop });
+    const dailyStats = await getDailyIntakeSummary();
 
-  const payment = await addTransaction({
-    transaction_id: makeId('TX'),
-    user_id: 'ADMIN-1',
-    amount,
-    payment_method: 'Mobile Money',
-    status: 'PENDING',
-    reference: `PAY-${Date.now()}`,
-    description: `Automated payment for ${farmerName}`,
-    date: new Date().toISOString()
-  });
-
-  return res.status(201).json({ success: true, payment, totalBags: DAILY_INTAKE.bags });
+    return res.status(201).json({ success: true, payment: result.payment, totalBags: dailyStats.bags });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to record intake' });
+  }
 });
 
 app.get('/api/v1/inventory', async (_req, res) => {
   const inventory = await getInventory() as Array<any>;
-  const normalizedStock = inventory.map(item => ({
-    name: item.product_type || item.type || 'Unknown Item',
+  res.json(inventory.map(item => ({
+    name: item.product_type || 'Unknown Item',
     qty: item.quantity ?? 0,
-    unit: 'Bags',
-    status: item.status || (item.quantity >= 100 ? 'STABLE' : 'LOW'),
-    ...item
-  }));
-  res.json(normalizedStock);
+    unit: item.unit || 'Bags', // Fetch unit from DB
+    status: item.quantity >= 100 ? 'STABLE' : 'LOW', // Status derived, or could be a DB column
+    ...item // Include all other fields
+  })));
+});
+
+// Global Error Handler Refinement
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal Server Error',
+    error: process.env.NODE_ENV === 'development' ? err : {}
+  });
 });
 
 const port = Number(process.env.PORT || 4000);

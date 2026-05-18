@@ -177,3 +177,34 @@ export interface Transaction {
   status: 'COMPLETED' | 'PENDING' | 'FAILED';
   date: string;
 }
+
+export interface PaymentRecord {
+  payment_id: string;
+  name: string;
+  nrc: string;
+  qty: number;
+  amount: number;
+  method: string;
+  status: 'APPROVED' | 'PENDING' | 'CANCELLED';
+  district: string;
+}
+
+export interface DeliveryRecord {
+  delivery_id: string;
+  farmer_id: string;
+  depot_id: string;
+  crop_type: string;
+  weight: number;
+  grade: string;
+  recorded_at: string;
+}
+
+export interface Shipment {
+  shipment_id: string;
+  status: string;
+  origin: string;
+  destination: string;
+  load: number;
+  departure: string;
+  eta: string;
+}
