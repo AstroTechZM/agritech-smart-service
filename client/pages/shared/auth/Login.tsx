@@ -1,8 +1,9 @@
+// client/pages/shared/auth/Login.tsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Landmark, ShieldAlert, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { UserRole, User } from '@/types';
 import { MOCK_USERS } from '@/data/mockData';
 import { useFarmers } from '@/context/FarmerContext';
@@ -12,55 +13,127 @@ interface LoginProps {
   onLogin: (user: User) => void;
 }
 
+/**
+ * Login screen for all portal users.
+ *
+ * Supports:
+ * 1. Mock/admin/agent/agro-dealer login by official email.
+ * 2. Mock users with NRC login.
+ * 3. Farmers registered through the registration form by NRC.
+ * 4. Role-aware redirect to /dashboard.
+ */
 export const Login = ({ onLogin }: LoginProps) => {
   const navigate = useNavigate();
-  const { findFarmerByNRC } = useFarmers();
+
+  /**
+   * FarmerContext gives us locally/backend-registered farmers.
+   * findFarmerByNRC is used so farmers can log in with their NRC.
+   */
+  const { findFarmerByNRC, isLoading: farmersLoading } = useFarmers();
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  /**
+   * Attempts to log in the user.
+   *
+   * Login priority:
+   * 1. Check MOCK_USERS by email or NRC.
+   * 2. Check registered farmers by NRC.
+   * 3. Show invalid credentials error.
+   */
   const handleLogin = async () => {
-    if (!identifier) {
-      toast.error("Please enter your NRC or Email.");
+    const normalizedIdentifier = identifier.trim();
+
+    if (!normalizedIdentifier) {
+      toast.error('Please enter your NRC or Email.');
+      return;
+    }
+
+    if (farmersLoading) {
+      toast.info('Still loading farmer records. Please try again in a moment.');
       return;
     }
 
     setIsLoading(true);
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // 1. Check Mock Users (Admin, Agent, Agro Dealer, etc.)
-    const matchedMockUser = Object.values(MOCK_USERS).find(user => 
-      (user.email && user.email.toLowerCase() === identifier.toLowerCase()) || 
-      (user.nrc && user.nrc === identifier)
-    );
+    try {
+      /**
+       * Small delay so users clearly see the loading state.
+       * Remove this later when real backend auth is connected.
+       */
+      await new Promise((resolve) => setTimeout(resolve, 650));
 
-    if (matchedMockUser) {
-      onLogin(matchedMockUser);
-      toast.success(`Welcome back, ${matchedMockUser.name || matchedMockUser.first_name}!`);
-      setIsLoading(false);
-      return;
-    }
+      const normalizedEmail = normalizedIdentifier.toLowerCase();
+      const normalizedNrc = normalizedIdentifier.replace(/\s+/g, '').toLowerCase();
 
-    // 2. Check Persisted Farmers (FarmerContext)
-    const farmer = findFarmerByNRC(identifier);
-    if (farmer) {
-      onLogin({
-        id: `F-${farmer.nrc}`,
-        name: `${farmer.firstName} ${farmer.lastName}`,
-        role: UserRole.FARMER,
-        nrc: farmer.nrc,
-        district: farmer.district,
-        email: `${farmer.firstName.toLowerCase()}@example.zm`,
-        avatar: `https://picsum.photos/seed/${farmer.nrc}/200`,
+      /**
+       * 1. Check mock system users:
+       * - Admin
+       * - Agent
+       * - Agro dealer
+       * - Demo farmer
+       */
+      const matchedMockUser = Object.values(MOCK_USERS).find((user) => {
+        const emailMatches = user.email?.toLowerCase() === normalizedEmail;
+        const nrcMatches = user.nrc?.replace(/\s+/g, '').toLowerCase() === normalizedNrc;
+
+        return emailMatches || nrcMatches;
       });
-      toast.success(`Welcome back, ${farmer.firstName}!`);
-      setIsLoading(false);
-      return;
-    }
 
-    toast.error("Invalid credentials. Please try again.");
-    setIsLoading(false);
+      if (matchedMockUser) {
+        onLogin(matchedMockUser);
+        toast.success(`Welcome back, ${matchedMockUser.name || matchedMockUser.first_name}!`);
+
+        /**
+         * Dashboard.tsx decides which dashboard to show based on role:
+         * FARMER, ADMIN, AGENT, AGRO_DEALER.
+         */
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+
+      /**
+       * 2. Check farmers registered through the registration page.
+       */
+      const farmer = findFarmerByNRC(normalizedIdentifier);
+
+      if (farmer) {
+        /**
+         * If a farmer has a saved PIN, verify it when the user enters a password.
+         * This keeps current demo behavior flexible while supporting PIN validation.
+         */
+        if (farmer.pin && password && farmer.pin !== password) {
+          toast.error('Invalid PIN for this NRC. Please try again.');
+          return;
+        }
+
+        onLogin({
+          id: farmer.farmerID || `F-${farmer.nrc}`,
+          name: `${farmer.firstName} ${farmer.lastName}`,
+          first_name: farmer.firstName,
+          last_name: farmer.lastName,
+          role: UserRole.FARMER,
+          nrc: farmer.nrc,
+          district: farmer.district,
+          email: `${farmer.firstName.toLowerCase()}@example.zm`,
+          avatar: farmer.photo || `https://picsum.photos/seed/${farmer.nrc}/200`,
+          farmerID: farmer.farmerID,
+        });
+
+        toast.success(`Welcome back, ${farmer.firstName}!`);
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+
+      /**
+       * 3. Nothing matched.
+       */
+      toast.error('Invalid credentials. Please check your NRC or work email and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -74,8 +147,14 @@ export const Login = ({ onLogin }: LoginProps) => {
           <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-primary/20">
             <Landmark size={32} />
           </div>
-          <h1 className="text-2xl font-black font-headline text-primary tracking-tight">Agri Tech Portal</h1>
-          <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mt-1 text-center">Secure Digital Services • Zambia</p>
+
+          <h1 className="text-2xl font-black font-headline text-primary tracking-tight">
+            Agri Tech Portal
+          </h1>
+
+          <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mt-1 text-center">
+            Secure Digital Services • Zambia
+          </p>
         </div>
 
         <div className="space-y-6">
@@ -84,22 +163,35 @@ export const Login = ({ onLogin }: LoginProps) => {
               <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">
                 NRC Number or Work Email
               </label>
+
               <input
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleLogin();
+                }}
                 placeholder="e.g. 000000/00/1 or admin@mafs.gov.zm"
                 className="w-full bg-surface-container-low border-none rounded-2xl py-3.5 px-5 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
               />
-              <p className="text-[9px] text-neutral-400 font-medium ml-1">Enter your registered NRC or official work email.</p>
+
+              <p className="text-[9px] text-neutral-400 font-medium ml-1">
+                Enter your registered NRC or official work email.
+              </p>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">Secure PIN / Password</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 ml-1">
+                Secure PIN / Password
+              </label>
+
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleLogin();
+                }}
                 placeholder="••••••••"
                 className="w-full bg-surface-container-low border-none rounded-2xl py-3.5 px-5 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
               />
@@ -108,25 +200,38 @@ export const Login = ({ onLogin }: LoginProps) => {
 
           <button
             onClick={handleLogin}
-            disabled={isLoading}
-            className="w-full primary-gradient text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            disabled={isLoading || farmersLoading}
+            className="w-full primary-gradient text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
           >
-            {isLoading ? <Loader2 className="animate-spin" size={24} /> : 'Login to Portal'}
+            {isLoading || farmersLoading ? (
+              <>
+                <Loader2 className="animate-spin" size={24} />
+                Signing in…
+              </>
+            ) : (
+              'Login to Portal'
+            )}
           </button>
 
           <div className="bg-primary/5 p-4 rounded-2xl flex gap-3 items-start border border-primary/10">
             <ShieldAlert size={18} className="text-primary shrink-0 mt-0.5" />
             <p className="text-[10px] text-primary/80 font-medium leading-relaxed">
-                <span className="font-bold">Security Note:</span> This is a secure government portal. Unauthorized access is strictly prohibited and monitored.
+              <span className="font-bold">Security Note:</span> This is a secure government portal.
+              Unauthorized access is strictly prohibited and monitored.
             </p>
           </div>
 
           <div className="relative py-2">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-black/5"></div></div>
-            <div className="relative flex justify-center text-[10px] uppercase font-bold text-neutral-400 bg-surface-container-lowest px-2">New Farmer?</div>
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-black/5" />
+            </div>
+
+            <div className="relative flex justify-center text-[10px] uppercase font-bold text-neutral-400 bg-surface-container-lowest px-2">
+              New Farmer?
+            </div>
           </div>
 
-          <button 
+          <button
             onClick={() => navigate('/register')}
             className="w-full bg-tertiary text-white py-4 rounded-2xl font-black font-headline text-lg shadow-xl shadow-tertiary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
@@ -134,10 +239,12 @@ export const Login = ({ onLogin }: LoginProps) => {
           </button>
         </div>
       </motion.div>
-      <p className="mt-8 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.3em]">Official Government System • 2026</p>
+
+      <p className="mt-8 text-[10px] font-bold text-neutral-400 uppercase tracking-[0.3em]">
+        Official Government System • 2026
+      </p>
     </div>
   );
 };
 
 export default Login;
-

@@ -8,12 +8,12 @@ import {
   QrCode, Copy, Camera, Upload, Pen, Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { UserRole } from '@/types';
+import { User as AppUser, UserRole } from '@/types';
 import { useFarmers } from '@/context/FarmerContext';
 import { toast } from 'sonner';
 
 interface RegistrationProps {
-  onLogin: (user: any) => void;
+  onLogin: (user: AppUser) => void;
 }
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
@@ -74,31 +74,65 @@ interface SignatureCanvasProps {
   savedSignature: string;
 }
 
+/**
+ * Canvas component used to capture the farmer's digital signature.
+ *
+ * Supports:
+ * - Mouse drawing on desktop/laptop.
+ * - Touch drawing on phones/tablets.
+ * - Restoring a saved signature when the user returns to this step.
+ * - Clearing the signature.
+ */
 const SignatureCanvas = ({ onSave, savedSignature }: SignatureCanvasProps) => {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const isDrawing  = useRef(false);
   const lastPos    = useRef<{ x: number; y: number } | null>(null);
   const hasStrokes = useRef(false);
 
+  /**
+   * Restore saved signature when the canvas mounts or when savedSignature changes.
+   */
   useEffect(() => {
     if (savedSignature && canvasRef.current) {
       const img = new Image();
-      img.onload = () => canvasRef.current?.getContext('2d')?.drawImage(img, 0, 0);
+
+      img.onload = () => {
+        canvasRef.current?.getContext('2d')?.drawImage(img, 0, 0);
+      };
+
       img.src = savedSignature;
       hasStrokes.current = true;
     }
-  }, []);
+  }, [savedSignature]);
 
-  const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
+  /**
+   * Converts a mouse/touch event into canvas coordinates.
+   *
+   * Important:
+   * The canvas is displayed responsively, so the visual size may differ from
+   * the real canvas width/height. scaleX and scaleY fix the coordinate mapping.
+   */
+  const getPos = (
+    e: React.MouseEvent | React.TouchEvent,
+    canvas: HTMLCanvasElement
+  ) => {
     const rect   = canvas.getBoundingClientRect();
     const scaleX = canvas.width  / rect.width;
     const scaleY = canvas.height / rect.height;
+
     if ('touches' in e) {
+      const touch = e.touches[0] || e.changedTouches[0];
+
+      if (!touch) {
+        return lastPos.current || { x: 0, y: 0 };
+      }
+
       return {
-        x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top)  * scaleY,
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top)  * scaleY,
       };
     }
+
     return {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top)  * scaleY,
@@ -107,18 +141,24 @@ const SignatureCanvas = ({ onSave, savedSignature }: SignatureCanvasProps) => {
 
   const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
+
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     isDrawing.current = true;
     lastPos.current   = getPos(e, canvas);
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
+
     if (!isDrawing.current || !canvasRef.current || !lastPos.current) return;
+
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
+
     const pos = getPos(e, canvasRef.current);
+
     ctx.beginPath();
     ctx.moveTo(lastPos.current.x, lastPos.current.y);
     ctx.lineTo(pos.x, pos.y);
@@ -127,15 +167,19 @@ const SignatureCanvas = ({ onSave, savedSignature }: SignatureCanvasProps) => {
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
     ctx.stroke();
+
     lastPos.current    = pos;
     hasStrokes.current = true;
   };
 
   const stopDraw = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
+
     if (!isDrawing.current) return;
+
     isDrawing.current = false;
     lastPos.current   = null;
+
     if (canvasRef.current && hasStrokes.current) {
       onSave(canvasRef.current.toDataURL('image/png'));
     }
@@ -144,6 +188,7 @@ const SignatureCanvas = ({ onSave, savedSignature }: SignatureCanvasProps) => {
   const clearCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height);
     hasStrokes.current = false;
     onSave('');
@@ -164,12 +209,16 @@ const SignatureCanvas = ({ onSave, savedSignature }: SignatureCanvasProps) => {
           onTouchStart={startDraw}
           onTouchMove={draw}
           onTouchEnd={stopDraw}
+          onTouchCancel={stopDraw}
         />
+
         <div className="absolute bottom-8 left-8 right-8 border-b border-neutral-200 pointer-events-none" />
+
         <p className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-neutral-300 uppercase tracking-widest pointer-events-none whitespace-nowrap">
           Sign above the line
         </p>
       </div>
+
       <button
         type="button"
         onClick={clearCanvas}
@@ -180,7 +229,6 @@ const SignatureCanvas = ({ onSave, savedSignature }: SignatureCanvasProps) => {
     </div>
   );
 };
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const Registration = ({ onLogin }: RegistrationProps) => {
@@ -208,61 +256,111 @@ const Registration = ({ onLogin }: RegistrationProps) => {
   });
 
   const set = (field: string, value: any) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
+  setForm((prev) => ({ ...prev, [field]: value }));
+
+/**
+ * Clears the generated Farmer ID when location changes.
+ * This prevents a farmer from keeping an ID generated from a previous district.
+ */
+const resetGeneratedID = () => setGeneratedID('');
 
   const toggleCrop = (crop: string) =>
     set('crops', form.crops.includes(crop)
       ? form.crops.filter((c) => c !== crop)
       : [...form.crops, crop]);
 
-  // Generate ID when entering Step 6
-  useEffect(() => {
-    if (step === 6 && !generatedID) {
-      setGeneratedID(generateFarmerID(form.district));
-    }
-  }, [step]);
+/**
+ * Generate Farmer ID only when the farmer reaches Step 6.
+ *
+ * We do not generate it earlier because:
+ * - The district may still change.
+ * - Farmer ID is district-based.
+ * - The sequence number should only advance when the registration is ready.
+ */
+useEffect(() => {
+  if (step === 6 && !generatedID && form.district) {
+    setGeneratedID(generateFarmerID(form.district));
+  }
+}, [step, generatedID, form.district]);
 
-  // ── Photo handler (shared by both inputs) ──────────────────────────────────
+/**
+ * Handles photo upload from either:
+ * - Camera input.
+ * - Gallery/file input.
+ *
+ * The image is stored as a base64 data URL for local preview and persistence.
+ */
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be under 5MB.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (ev) => set('photo', ev.target?.result as string);
-    reader.readAsDataURL(file);
-    // Reset input so same file can be selected again if needed
+  const file = e.target.files?.[0];
+
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    toast.error('Image must be under 5MB.');
+
+    /**
+     * Reset input so the same file can be selected again after an error.
+     */
     e.target.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = (ev) => {
+    set('photo', ev.target?.result as string);
   };
+
+  reader.readAsDataURL(file);
+
+  /**
+   * Reset input so the same file can be selected again if needed.
+   */
+  e.target.value = '';
+};
 
   // ── Validation ─────────────────────────────────────────────────────────────
-  const validate = (): string | null => {
-    if (step === 1) {
-      if (!form.firstName.trim()) return 'First name is required.';
-      if (!form.lastName.trim())  return 'Last name is required.';
-      if (!form.nrc.trim())       return 'NRC number is required.';
-      if (!form.gender)           return 'Please select your gender.';
+  /**
+ * Validates the current registration step.
+ *
+ * Each step only validates its own fields so the user can move through
+ * the form progressively.
+ */
+const validate = (): string | null => {
+  if (step === 1) {
+    if (!form.firstName.trim()) return 'First name is required.';
+    if (!form.lastName.trim())  return 'Last name is required.';
+    if (!form.nrc.trim())       return 'NRC number is required.';
+    if (!form.gender)           return 'Please select your gender.';
+  }
+
+  if (step === 2) {
+    if (!form.province)    return 'Please select your province.';
+    if (!form.district)    return 'Please select your district.';
+    if (!form.camp.trim()) return 'Camp / constituency is required.';
+  }
+
+  if (step === 3) {
+    if (!form.farmSize) return 'Please enter your farm size.';
+
+    if (Number(form.farmSize) <= 0) {
+      return 'Farm size must be greater than 0 hectares.';
     }
-    if (step === 2) {
-      if (!form.province)    return 'Please select your province.';
-      if (!form.district)    return 'Please select your district.';
-      if (!form.camp.trim()) return 'Camp / constituency is required.';
-    }
-    if (step === 3) {
-      if (!form.farmSize)          return 'Please enter your farm size.';
-      if (form.crops.length === 0) return 'Select at least one crop.';
-    }
-    if (step === 4) {
-      if (form.pin.length < 4)          return 'PIN must be at least 4 digits.';
-      if (form.pin !== form.confirmPin) return 'PINs do not match.';
-    }
-    if (step === 5) {
-      if (!form.signature) return 'Please provide your signature before continuing.';
-    }
-    return null;
-  };
+
+    if (form.crops.length === 0) return 'Select at least one crop.';
+  }
+
+  if (step === 4) {
+    if (form.pin.length < 4)          return 'PIN must be at least 4 digits.';
+    if (form.pin !== form.confirmPin) return 'PINs do not match.';
+  }
+
+  if (step === 5) {
+    if (!form.signature) return 'Please provide your signature before continuing.';
+  }
+
+  return null;
+};
 
   const handleNext = () => {
     const err = validate();
@@ -272,48 +370,79 @@ const Registration = ({ onLogin }: RegistrationProps) => {
 
   const handleBack = () => setStep((s) => s - 1);
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      const farmer = {
-        nrc:       form.nrc.trim(),
-        firstName: form.firstName.trim(),
-        lastName:  form.lastName.trim(),
-        gender:    form.gender,
-        district:  form.district,
-        camp:      form.camp.trim(),
-        farmSize:  form.farmSize,
-        gps:       form.gps || undefined,
-        crops:     form.crops,
-        farmerID:  generatedID,
-        photo:     form.photo     || undefined,
-        signature: form.signature || undefined,
-      };
+/**
+ * Completes farmer registration.
+ *
+ * On success:
+ * 1. Creates the farmer payload.
+ * 2. Saves the farmer using FarmerContext.
+ * 3. Logs the farmer in immediately.
+ * 4. Shows the success screen.
+ * 5. Redirects to the farmer dashboard.
+ */
+const handleSubmit = async () => {
+  setIsSubmitting(true);
 
-      await addFarmer(farmer as any);
+  try {
+    /**
+     * Safety fallback:
+     * The ID is normally generated when entering Step 6.
+     * If it is still empty for any reason, generate it here before saving.
+     */
+    const farmerID = generatedID || generateFarmerID(form.district);
 
-      onLogin({
-        id:         generatedID,
-        name:       `${farmer.firstName} ${farmer.lastName}`,
-        first_name: farmer.firstName,
-        role:       UserRole.FARMER,
-        nrc:        farmer.nrc,
-        district:   farmer.district,
-        email:      `${farmer.firstName.toLowerCase()}@example.zm`,
-        avatar:     farmer.photo || undefined,
-        farmerID:   generatedID,
-      });
-
-      setDone(true);
-      toast.success(`Welcome, ${farmer.firstName}! Registration successful.`);
-      setTimeout(() => navigate('/dashboard'), 2500);
-    } catch {
-      toast.error('Registration failed. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+    if (!generatedID) {
+      setGeneratedID(farmerID);
     }
-  };
+
+    const farmer = {
+      nrc:       form.nrc.trim(),
+      firstName: form.firstName.trim(),
+      lastName:  form.lastName.trim(),
+      gender:    form.gender,
+      district:  form.district,
+      camp:      form.camp.trim(),
+      farmSize:  form.farmSize,
+      gps:       form.gps || undefined,
+      crops:     form.crops,
+      farmerID,
+      photo:     form.photo     || undefined,
+      signature: form.signature || undefined,
+
+      /**
+       * Store PIN so the farmer can later log in with NRC + PIN.
+       */
+      pin: form.pin,
+    };
+
+    await addFarmer(farmer as any);
+
+    /**
+     * Immediately authenticate the newly registered farmer.
+     * Dashboard.tsx will show the farmer dashboard because role is FARMER.
+     */
+    onLogin({
+      id:         farmerID,
+      name:       `${farmer.firstName} ${farmer.lastName}`,
+      first_name: farmer.firstName,
+      role:       UserRole.FARMER,
+      nrc:        farmer.nrc,
+      district:   farmer.district,
+      email:      `${farmer.firstName.toLowerCase()}@example.zm`,
+      avatar:     farmer.photo || `https://picsum.photos/seed/${farmer.nrc}/200`,
+      farmerID,
+    });
+
+    setDone(true);
+    toast.success(`Welcome, ${farmer.firstName}! Registration successful.`);
+
+    setTimeout(() => navigate('/dashboard'), 2500);
+  } catch {
+    toast.error('Registration failed. Please try again.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // ── Success Screen ─────────────────────────────────────────────────────────
   if (done) {
@@ -462,7 +591,7 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                         </div>
                       ) : (
                         <div className="w-28 h-28 rounded-[1.5rem] bg-white border-2 border-dashed border-neutral-300 flex flex-col items-center justify-center text-neutral-300 gap-2">
-                          <User size={32} />
+                          <User size={35} />
                           <span className="text-[9px] font-bold uppercase tracking-widest">
                             No Photo
                           </span>
@@ -585,19 +714,30 @@ const Registration = ({ onLogin }: RegistrationProps) => {
                   <StepHeading title="Location Details" sub="Where is your farm located?" />
 
                   <Field label="Province" required>
-                    <select value={form.province}
-                      onChange={(e) => { set('province', e.target.value); set('district', ''); }}
-                      className={inputCls}>
+                    <select
+                          value={form.province}
+                          onChange={(e) => {
+                            set('province', e.target.value);
+                            set('district', '');
+                            resetGeneratedID();
+                          }}
+                          className={inputCls}
+                        >
                       <option value="">Select Province…</option>
                       {ZAMBIA_PROVINCES.map((p) => <option key={p}>{p}</option>)}
                     </select>
                   </Field>
 
                   <Field label="District" required>
-                    <select value={form.district}
-                      onChange={(e) => set('district', e.target.value)}
-                      disabled={!form.province}
-                      className={cn(inputCls, !form.province && 'opacity-50 cursor-not-allowed')}>
+                        <select
+                              value={form.district}
+                              onChange={(e) => {
+                                set('district', e.target.value);
+                                resetGeneratedID();
+                              }}
+                              disabled={!form.province}
+                              className={cn(inputCls, !form.province && 'opacity-50 cursor-not-allowed')}
+                            >
                       <option value="">Select District…</option>
                       {(DISTRICTS_BY_PROVINCE[form.province] || []).map((d) => (
                         <option key={d}>{d}</option>
