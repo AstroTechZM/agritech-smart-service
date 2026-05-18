@@ -129,6 +129,7 @@ export const Registration = () => {
       const payload = {
         ...formData,
         farmSize: parseFloat(formData.farmSize),
+        gpsCoordinates: formData.gps,
         photo: capturedImageSrc,
         signature: capturedSignatureSrc
       };

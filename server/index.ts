@@ -20,7 +20,7 @@ const FarmerRegisterSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   nrc: z.string().regex(/^\d{6}\/\d{2}\/\d{1}$/, 'Invalid NRC format (correct: 123456/10/1)'),
-  phone: z.string().min(8, 'Phone number must be at least 8 characters'),
+  phone: z.string().min(8, 'Phone number must be at least 8 characters').optional().nullable(),
   farmSize: z.number().positive('Farm size must be a positive number'),
   gpsCoordinates: z.string().optional(),
   user_id: z.string().optional(),
