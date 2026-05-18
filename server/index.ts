@@ -73,6 +73,7 @@ const validateBody = (schema: z.ZodSchema) => (req: express.Request, res: expres
 
 const {
   findUserByIdentifier,
+  verifyPassword,
   getFarmers,
   createFarmer,
   getWalletBalance,
@@ -127,8 +128,8 @@ app.post('/api/v1/auth/login', validateBody(LoginSchema), async (req, res) => {
     return res.status(401).json({ message: 'Invalid identifier or password' });
   }
 
-  // Verify password matches
-  if (user.password !== password) {
+  // Verify hashed password matches
+  if (!verifyPassword(password, user.password)) {
     return res.status(401).json({ message: 'Invalid identifier or password' });
   }
 

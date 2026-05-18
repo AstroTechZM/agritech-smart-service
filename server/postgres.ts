@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import crypto from 'crypto';
 import { Pool, type PoolConfig } from 'pg';
 import {
   USERS,
@@ -28,6 +29,19 @@ const poolConfig: PoolConfig = {
 
 
 export const pool = new Pool(poolConfig);
+
+// ----------------------------------------------------
+// Password Hashing Security Helpers
+// ----------------------------------------------------
+export const hashPassword = (password: string): string => {
+  const salt = 'agritech_secret_salt_2026';
+  return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+};
+
+export const verifyPassword = (password: string, hash: string): boolean => {
+  if (!password || !hash) return false;
+  return hashPassword(password) === hash;
+};
 
 const createTables = async () => {
   await pool.query(`
@@ -156,7 +170,17 @@ const createTables = async () => {
   await pool.query(`ALTER TABLE farmers ADD COLUMN IF NOT EXISTS photo TEXT`);
   await pool.query(`ALTER TABLE farmers ADD COLUMN IF NOT EXISTS signature TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password TEXT`);
-  await pool.query(`UPDATE users SET password = 'secure123' WHERE password IS NULL`);
+  
+  // Safe live migration to convert cleartext passwords to secure hashes
+  const { rows: cleartextUsers } = await pool.query(`
+    SELECT user_id, password FROM users 
+    WHERE password IS NULL OR LENGTH(password) < 60
+  `);
+  for (const u of cleartextUsers) {
+    const rawPass = u.password || 'secure123';
+    const hashed = hashPassword(rawPass);
+    await pool.query(`UPDATE users SET password = $1 WHERE user_id = $2`, [hashed, u.user_id]);
+  }
 };
 
 const seedIfEmpty = async () => {
@@ -167,7 +191,7 @@ const seedIfEmpty = async () => {
     try {
       await client.query('BEGIN');
       for (const u of USERS) {
-        await client.query(insert, [u.id, u.name, u.email, u.role, u.district ?? null, u.nrc ?? null, u.cell_number ?? null, 'secure123']);
+        await client.query(insert, [u.id, u.name, u.email, u.role, u.district ?? null, u.nrc ?? null, u.cell_number ?? null, hashPassword('secure123')]);
       }
       await client.query('COMMIT');
     } finally { client.release(); }
@@ -438,6 +462,7 @@ export const getDailyIntakeSummary = async () => {
 
 export default {
   findUserByIdentifier,
+  verifyPassword,
   getUsers,
   updateUser,
   getFarmers,
