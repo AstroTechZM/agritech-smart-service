@@ -52,6 +52,8 @@ const createTables = async () => {
       farm_size REAL,
       gps_coordinates TEXT,
       fisp_eligible BOOLEAN,
+      photo TEXT,
+      signature TEXT,
       date_registered TEXT
     );
 
@@ -148,6 +150,10 @@ const createTables = async () => {
       date TEXT
     );
   `);
+
+  // Schema Migrations for existing DB instances (Render)
+  await pool.query(`ALTER TABLE farmers ADD COLUMN IF NOT EXISTS photo TEXT`);
+  await pool.query(`ALTER TABLE farmers ADD COLUMN IF NOT EXISTS signature TEXT`);
 };
 
 const seedIfEmpty = async () => {
@@ -345,7 +351,21 @@ export const getFarmers = async () => (await pool.query(`SELECT * FROM farmers`)
 
 export const createFarmer = async (payload: any) => {
   const farmer_id = `F-${Date.now()}`;
-  await pool.query(`INSERT INTO farmers (farmer_id, user_id, first_name, last_name, district, nrc, phone, farm_size, gps_coordinates, fisp_eligible, date_registered) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [farmer_id, String(payload.user_id || ''), payload.first_name || payload.firstName || 'Unknown', payload.last_name || payload.lastName || 'Farmer', payload.district || 'Unknown', payload.nrc, payload.phone || payload.cell_number || '0000000000', payload.farm_size || payload.farmSize || 0, payload.gps_coordinates || payload.gpsCoordinates || '0,0', payload.fisp_eligible ? true : false, new Date().toISOString().split('T')[0]]);
+  await pool.query(`INSERT INTO farmers (farmer_id, user_id, first_name, last_name, district, nrc, phone, farm_size, gps_coordinates, fisp_eligible, photo, signature, date_registered) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [
+    farmer_id, 
+    String(payload.user_id || ''), 
+    payload.first_name || payload.firstName || 'Unknown', 
+    payload.last_name || payload.lastName || 'Farmer', 
+    payload.district || 'Unknown', 
+    payload.nrc, 
+    payload.phone || payload.cell_number || '0000000000', 
+    payload.farm_size || payload.farmSize || 0, 
+    payload.gps_coordinates || payload.gpsCoordinates || '0,0', 
+    payload.fisp_eligible ? true : false,
+    payload.photo || null,
+    payload.signature || null,
+    new Date().toISOString().split('T')[0]
+  ]);
   return (await pool.query(`SELECT * FROM farmers WHERE farmer_id = $1`, [farmer_id])).rows[0];
 };
 

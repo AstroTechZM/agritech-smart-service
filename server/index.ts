@@ -24,7 +24,9 @@ const FarmerRegisterSchema = z.object({
   farmSize: z.number().positive('Farm size must be a positive number'),
   gpsCoordinates: z.string().optional(),
   user_id: z.string().optional(),
-  fisp_eligible: z.boolean().optional()
+  fisp_eligible: z.boolean().optional(),
+  photo: z.string().optional().nullable(),
+  signature: z.string().optional().nullable()
 });
 
 const WithdrawSchema = z.object({

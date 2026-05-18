@@ -126,9 +126,16 @@ export const Registration = () => {
     if (!validateStep(4)) return;
     
     try {
-      await registerFarmer(formData);
+      const payload = {
+        ...formData,
+        farmSize: parseFloat(formData.farmSize),
+        photo: capturedImageSrc,
+        signature: capturedSignatureSrc
+      };
+
+      await registerFarmer(payload);
       // Add to global state
-      addFarmer(formData);
+      addFarmer(payload);
       toast.success("Farmer registration completed successfully!");
       setStep(5);
     } catch (error) {
