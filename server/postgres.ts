@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Pool, type PoolConfig } from 'pg';
 import {
   USERS,
@@ -348,7 +349,11 @@ export const createFarmer = async (payload: any) => {
   return (await pool.query(`SELECT * FROM farmers WHERE farmer_id = $1`, [farmer_id])).rows[0];
 };
 
-export const getWalletBalance = async () => {
+export const getWalletBalance = async (userId?: string) => {
+  if (userId) {
+    const res = await pool.query(`SELECT COALESCE(SUM(amount),0) AS balance FROM transactions WHERE user_id = $1`, [userId]);
+    return Number(res.rows[0].balance);
+  }
   const res = await pool.query(`SELECT COALESCE(SUM(amount),0) AS balance FROM transactions`);
   return Number(res.rows[0].balance);
 };

@@ -1,11 +1,72 @@
+import 'dotenv/config';
 import express from 'express';
 import { json } from 'express';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 import { authenticate, AuthRequest } from '../auth';
 import { ProductionService } from './production.service';
 import storage from './postgres';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fra-super-secret-key';
+
+// ----------------------------------------------------
+// Zod Validation Schemas
+// ----------------------------------------------------
+const LoginSchema = z.object({
+  identifier: z.string().min(1, 'Identifier is required')
+});
+
+const FarmerRegisterSchema = z.object({
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  nrc: z.string().regex(/^\d{6}\/\d{2}\/\d{1}$/, 'Invalid NRC format (correct: 123456/10/1)'),
+  phone: z.string().min(8, 'Phone number must be at least 8 characters'),
+  farmSize: z.number().positive('Farm size must be a positive number'),
+  gpsCoordinates: z.string().optional(),
+  user_id: z.string().optional(),
+  fisp_eligible: z.boolean().optional()
+});
+
+const WithdrawSchema = z.object({
+  user_id: z.string().min(1, 'User ID is required'),
+  amount: z.number().positive('Amount must be positive')
+});
+
+const RedeemVoucherSchema = z.object({
+  pin_code: z.string().min(4, 'PIN code must be at least 4 characters')
+});
+
+const UpdateProfileSchema = z.object({
+  user_id: z.string().min(1, 'User ID is required'),
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  district: z.string().nullable().optional(),
+  nrc: z.string().regex(/^\d{6}\/\d{2}\/\d{1}$/, 'Invalid NRC format').nullable().optional(),
+  cell_number: z.string().nullable().optional()
+});
+
+const GrainIntakeSchema = z.object({
+  weight: z.number().positive('Weight must be positive'),
+  nrc: z.string().regex(/^\d{6}\/\d{2}\/\d{1}$/, 'Invalid NRC format'),
+  farmerName: z.string().min(2, 'Farmer name is required'),
+  crop: z.string().min(1, 'Crop type is required')
+});
+
+// Middleware helper
+const validateBody = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const result = schema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({
+      message: 'Validation failed',
+      errors: result.error.issues.map(err => ({
+        path: err.path.join('.'),
+        message: err.message
+      }))
+    });
+  }
+  req.body = result.data;
+  next();
+};
 
 const {
   findUserByIdentifier,
@@ -55,7 +116,7 @@ app.get('/api/v1/ping', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.post('/api/v1/auth/login', async (req, res) => {
+app.post('/api/v1/auth/login', validateBody(LoginSchema), async (req, res) => {
   const { identifier } = req.body;
   const user = await findUserByIdentifier(identifier);
 
@@ -76,7 +137,7 @@ app.get('/api/v1/farmers', authenticate, async (_req, res) => {
   res.json(await getFarmers());
 });
 
-app.post('/api/v1/farmers/register', authenticate, async (req, res) => {
+app.post('/api/v1/farmers/register', authenticate, validateBody(FarmerRegisterSchema), async (req, res) => {
   const newFarmer = await createFarmer(req.body);
   return res.status(201).json(newFarmer);
 });
@@ -90,31 +151,46 @@ app.get('/api/v1/wallet/transactions', async (_req, res) => {
   res.json(await getTransactions());
 });
 
-app.post('/api/v1/wallet/withdraw', async (req, res) => {
+app.post('/api/v1/wallet/withdraw', validateBody(WithdrawSchema), async (req, res) => {
   const { user_id, amount } = req.body;
-  if (!user_id || typeof amount !== 'number' || amount <= 0) {
-    return res.status(400).json({ message: 'Invalid withdrawal request' });
+
+  // Ledger Check: Enforce sufficient balance before transaction to prevent negative balance overdrafts
+  const currentBalance = await getWalletBalance(user_id);
+  if (amount > currentBalance) {
+    return res.status(400).json({ message: `Insufficient funds. Your current balance is ZMW ${currentBalance.toFixed(2)}.` });
   }
+
+  // Simulate Airtel Money / MTN MoMo payment gateway connection and handshake
+  const momoGateway = {
+    provider: amount % 2 === 0 ? 'MTN Mobile Money' : 'Airtel Money',
+    handshake: 'SUCCESS',
+    externalReference: `ZMW-MOMO-${Math.floor(100000 + Math.random() * 900000)}`,
+  };
 
   const transaction = await addTransaction({
     transaction_id: makeId('TX'),
     user_id,
     amount: -Math.abs(amount),
-    payment_method: 'Mobile Money',
+    payment_method: momoGateway.provider,
     status: 'COMPLETED',
-    reference: `WD-${Date.now()}`,
-    description: 'Withdrawal to Mobile Money',
+    reference: momoGateway.externalReference,
+    description: `Mobile Money Payout via ${momoGateway.provider}`,
     date: new Date().toISOString()
   });
 
-  return res.status(201).json({ success: true, transaction });
+  return res.status(201).json({
+    success: true,
+    gateway: momoGateway.provider,
+    externalRef: momoGateway.externalReference,
+    transaction
+  });
 });
 
 app.get('/api/v1/vouchers', async (_req, res) => {
   res.json(await getVouchers());
 });
 
-app.post('/api/v1/vouchers/redeem', async (req, res) => {
+app.post('/api/v1/vouchers/redeem', validateBody(RedeemVoucherSchema), async (req, res) => {
   const { pin_code } = req.body;
   const result = await redeemVoucher(pin_code);
 
@@ -150,7 +226,7 @@ app.get('/api/v1/admin/shipments', async (_req, res) => {
   res.json(await getShipments());
 });
 
-app.put('/api/v1/profile', async (req, res) => {
+app.put('/api/v1/profile', validateBody(UpdateProfileSchema), async (req, res) => {
   const payload = req.body;
   const updated = await updateUser(payload);
   if (!updated) {
@@ -175,11 +251,8 @@ app.get('/api/v1/production/intake', async (_req, res) => {
   res.json(await getDailyIntakeSummary());
 });
 
-app.post('/api/v1/production/intake', async (req, res) => {
+app.post('/api/v1/production/intake', validateBody(GrainIntakeSchema), async (req, res) => {
   const { weight, nrc, farmerName, crop } = req.body;
-  if (!weight || !nrc || !farmerName) {
-    return res.status(400).json({ message: 'Missing intake data' });
-  }
 
   try {
     const result = await ProductionService.recordGrainIntake({ weight, nrc, farmerName, crop });
