@@ -18,7 +18,8 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redemptionStep, setRedemptionStep] = useState<'SCAN' | 'CONFIRM' | 'SUCCESS'>('SCAN');
   
-  const { data: stockItems, eggtData: setRedemptions, isLoading: isLoadingRedemptions } = useApi(api.fetchRedemptions);
+  const { data: stockItems, setData: setStockItems, isLoading: isLoadingStock } = useApi(api.fetchStock);
+  const { data: redemptions, setData: setRedemptions, isLoading: isLoadingRedemptions } = useApi(api.fetchRedemptions);
 
   const stockList = safeArray(stockItems);
   const redemptionsList = safeArray(redemptions);
@@ -43,7 +44,27 @@ export const AgroDealerDashboard = ({ user }: AgroDealerDashboardProps) => {
 
     // Deduct stock (2 packs of Maize Seed)
     if (stockItems && stockList.length > 0) {
-      const u(
+      const updatedStock = stockList.map(item => {
+        if (item.name.toLowerCase().includes('maize seed')) {
+          const newQty = Math.max(0, item.qty - 2);
+          return { ...item, qty: newQty, status: newQty < 50 ? 'LOW' : 'STABLE' };
+        }
+        return item;
+      });
+      setStockItems(updatedStock);
+    }
+
+    toast.success('Voucher redeemed successfully!');
+    setTimeout(() => {
+      setIsRedeeming(false);
+      setRedemptionStep('SCAN');
+    }, 2000);
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex justify-between items-start">
+        <div>
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-1 block">Agro-Dealer Portal</span>
           <h2 className="text-3xl font-black font-headline tracking-tight">{user?.name || 'Zambia Agro Hub Ltd'}</h2>
           <p className="text-sm text-neutral-500">License: AD-2024-991</p>
