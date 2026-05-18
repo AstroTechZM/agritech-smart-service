@@ -4,9 +4,9 @@ import { motion } from 'motion/react';
 import { Landmark, ShieldAlert, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserRole, User } from '@/types';
-import { MOCK_USERS } from '@/data/mockData';
 import { useFarmers } from '@/context/FarmerContext';
 import { toast } from 'sonner';
+import { api } from '@/services';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -24,43 +24,47 @@ export const Login = ({ onLogin }: LoginProps) => {
       toast.error("Please enter your NRC or Email.");
       return;
     }
+    if (!password) {
+      toast.error("Please enter your secure PIN / Password.");
+      return;
+    }
 
     setIsLoading(true);
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // 1. Check Mock Users (Admin, Agent, Agro Dealer, etc.)
-    const matchedMockUser = Object.values(MOCK_USERS).find(user => 
-      (user.email && user.email.toLowerCase() === identifier.toLowerCase()) || 
-      (user.nrc && user.nrc === identifier)
-    );
+    try {
+      // Authenticate via backend API with identifier and password
+      const response = await api.login(identifier, password, '');
+      const { user, token } = response;
 
-    if (matchedMockUser) {
-      onLogin(matchedMockUser);
-      toast.success(`Welcome back, ${matchedMockUser.name || matchedMockUser.first_name}!`);
+      localStorage.setItem('agritech_token', token);
+      onLogin(user);
+      toast.success(`Welcome back, ${user.name || user.firstName || 'User'}!`);
       setIsLoading(false);
       return;
-    }
+    } catch (error: any) {
+      console.warn("Backend login failed, attempting local session check...", error);
+      
+      // Fallback for newly registered session-only farmers
+      const farmer = findFarmerByNRC(identifier);
+      if (farmer) {
+        onLogin({
+          id: `F-${farmer.nrc}`,
+          name: `${farmer.firstName} ${farmer.lastName}`,
+          role: UserRole.FARMER,
+          nrc: farmer.nrc,
+          district: farmer.district,
+          email: `${farmer.firstName.toLowerCase()}@example.zm`,
+          avatar: `https://picsum.photos/seed/${farmer.nrc}/200`,
+        });
+        toast.success(`Welcome back, ${farmer.firstName}!`);
+        setIsLoading(false);
+        return;
+      }
 
-    // 2. Check Persisted Farmers (FarmerContext)
-    const farmer = findFarmerByNRC(identifier);
-    if (farmer) {
-      onLogin({
-        id: `F-${farmer.nrc}`,
-        name: `${farmer.firstName} ${farmer.lastName}`,
-        role: UserRole.FARMER,
-        nrc: farmer.nrc,
-        district: farmer.district,
-        email: `${farmer.firstName.toLowerCase()}@example.zm`,
-        avatar: `https://picsum.photos/seed/${farmer.nrc}/200`,
-      });
-      toast.success(`Welcome back, ${farmer.firstName}!`);
+      toast.error(error.message || "Invalid credentials. Please try again.");
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    toast.error("Invalid credentials. Please try again.");
-    setIsLoading(false);
   };
 
   return (

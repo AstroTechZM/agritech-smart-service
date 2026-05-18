@@ -13,7 +13,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fra-super-secret-key';
 // Zod Validation Schemas
 // ----------------------------------------------------
 const LoginSchema = z.object({
-  identifier: z.string().min(1, 'Identifier is required')
+  identifier: z.string().min(1, 'Identifier is required'),
+  password: z.string().min(4, 'Password must be at least 4 characters')
 });
 
 const FarmerRegisterSchema = z.object({
@@ -119,11 +120,16 @@ app.get('/api/v1/ping', (_req, res) => {
 });
 
 app.post('/api/v1/auth/login', validateBody(LoginSchema), async (req, res) => {
-  const { identifier } = req.body;
+  const { identifier, password } = req.body;
   const user = await findUserByIdentifier(identifier);
 
   if (!user) {
-    return res.status(401).json({ message: 'Invalid identifier' });
+    return res.status(401).json({ message: 'Invalid identifier or password' });
+  }
+
+  // Verify password matches
+  if (user.password !== password) {
+    return res.status(401).json({ message: 'Invalid identifier or password' });
   }
 
   const token = jwt.sign(
@@ -132,7 +138,10 @@ app.post('/api/v1/auth/login', validateBody(LoginSchema), async (req, res) => {
     { expiresIn: '24h' }
   );
 
-  return res.json({ user, token });
+  // Strip password for security
+  const { password: _, ...userWithoutPassword } = user;
+
+  return res.json({ user: userWithoutPassword, token });
 });
 
 app.get('/api/v1/farmers', authenticate, async (_req, res) => {
