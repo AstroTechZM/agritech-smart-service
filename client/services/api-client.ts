@@ -18,10 +18,11 @@ async function parseResponse<T>(response: Response): Promise<T> {
     : null;
 
   if (!response.ok) {
-    // If 401 Unauthorized, clear token and redirect to login
+    // If 401 Unauthorized, clear token and user, then redirect to login
     if (response.status === 401) {
       localStorage.removeItem('agritech_token');
-      window.location.href = '/login';
+      localStorage.removeItem('agritech_user_v2');
+      window.location.href = '/#/login';
     }
     throw new Error(
       (body && (body.message || body.error)) ||

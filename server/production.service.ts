@@ -22,11 +22,21 @@ export class ProductionService {
       const deliveryId = `D-REC-${Date.now()}`;
       const transactionId = `TX-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
+      // Find farmer_id by NRC if not provided
+      let actualFarmerId = data.farmerId;
+      if (!actualFarmerId && data.nrc) {
+        const farmerRes = await client.query('SELECT farmer_id FROM farmers WHERE nrc = $1 LIMIT 1', [data.nrc]);
+        if (farmerRes.rows.length > 0) {
+          actualFarmerId = farmerRes.rows[0].farmer_id;
+        }
+      }
+      const finalFarmerId = actualFarmerId || 'UNKNOWN';
+
       // 1. Record the delivery
       await client.query(
         `INSERT INTO delivery_records (delivery_id, farmer_id, crop_type, weight, recorded_at) 
          VALUES ($1, $2, $3, $4, $5)`,
-        [deliveryId, data.farmerId || 'UNKNOWN', data.crop, data.weight, timestamp]
+        [deliveryId, finalFarmerId, data.crop, data.weight, timestamp]
       );
 
       // 2. Create the pending payment record

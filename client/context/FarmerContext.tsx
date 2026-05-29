@@ -19,6 +19,7 @@ interface FarmerContextType {
   isLoading: boolean;
   addFarmer: (farmer: Farmer) => Promise<void>;
   findFarmerByNRC: (nrc: string) => Farmer | undefined;
+  refreshFarmers: () => Promise<void>;
 }
 
 const FarmerContext = createContext<FarmerContextType | undefined>(undefined);
@@ -40,21 +41,21 @@ export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [farmers, setFarmers] = useState<Farmer[]>([]); // Start with empty array
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchFarmers = async () => {
-      try {
-        setIsLoading(true);
-        const registeredFarmers = (await api.fetchFarmers()) as any[];
-        setFarmers(registeredFarmers.map(mapToFarmer));
-      } catch (error) {
-        // Log the error, but don't use fallback data anymore
-        console.warn('[FarmerContext] Using mock farmer data (backend unavailable)');
-        setFarmers([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchFarmers = async () => {
+    try {
+      setIsLoading(true);
+      const registeredFarmers = (await api.fetchFarmers()) as any[];
+      setFarmers(registeredFarmers.map(mapToFarmer));
+    } catch (error) {
+      // Log the error, but don't use fallback data anymore
+      console.warn('[FarmerContext] Using mock farmer data (backend unavailable)');
+      setFarmers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchFarmers();
   }, []);
 
@@ -73,7 +74,7 @@ export const FarmerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   return (
-    <FarmerContext.Provider value={{ farmers, isLoading, addFarmer, findFarmerByNRC }}>
+    <FarmerContext.Provider value={{ farmers, isLoading, addFarmer, findFarmerByNRC, refreshFarmers: fetchFarmers }}>
       {children}
     </FarmerContext.Provider>
   );

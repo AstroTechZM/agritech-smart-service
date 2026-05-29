@@ -18,8 +18,13 @@ export const App = () => {
 
   // Authentication State
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('agritech_user_v2');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('agritech_user_v2');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      localStorage.removeItem('agritech_user_v2');
+      return null;
+    }
   });
 
   // Persist user to localStorage

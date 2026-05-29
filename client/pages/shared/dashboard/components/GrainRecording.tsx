@@ -12,7 +12,7 @@ interface GrainRecordingProps {
 }
 
 export const GrainRecording = ({ onBack, onRefresh }: GrainRecordingProps) => {
-  const { findFarmerByNRC } = useFarmers();
+  const { findFarmerByNRC, refreshFarmers } = useFarmers();
   const [formData, setFormData] = useState({
     nrc: '',
     crop: MOCK_DEFAULTS.CROP_MAIZE,
@@ -39,8 +39,12 @@ export const GrainRecording = ({ onBack, onRefresh }: GrainRecordingProps) => {
     }
 
     setIsLookingUp(true);
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+    try {
+      // Ensure we have the latest farmers list from backend before looking up
+      await refreshFarmers();
+    } catch (e) {
+      console.warn("Could not refresh farmers list");
+    }
 
     const farmer = findFarmerByNRC(formData.nrc);
     
