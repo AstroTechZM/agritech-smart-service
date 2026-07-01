@@ -6,131 +6,149 @@ export enum UserRole {
 }
 
 export interface User {
-  id: string;
-  user_id?: number;
+  user_id: string; // Database PK (string UUID/identifier)
+  id?: string;     // Legacy frontend identifier
   name: string;
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  cell_num?: number;
-  nrc?: string;
-  nrc_number?: number;
+  email: string;
   role: UserRole;
-  avatar: string;
+  avatar?: string;
   district?: string;
+  nrc?: string;
+  cell_number?: string;
+  cell_num?: number; // Legacy compatibility
 }
 
 export interface Farmer {
-  farmer_id: number;
-  user_id: number;
-  location?: string;
-  date_registered: string;
-  biometric_ref?: string;
+  farmer_id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  district: string;
+  nrc: string;
+  phone: string;
+  farm_size: number;
+  gps_coordinates?: string;
   fisp_eligible: boolean;
-  pathway?: string;
+  photo?: string | null;
+  signature?: string | null;
+  date_registered: string;
 }
 
 export interface Farm {
-  farm_id: number;
-  farmer_id: number;
+  farm_id: string;
+  farmer_id: string;
   farm_size: number;
   location?: string;
   gps_coordinates?: string;
 }
 
 export interface AgroDealer {
-  dealer_id: number;
-  user_id: number;
-  business_id: number;
+  dealer_id: string;
+  user_id: string;
+  business_id: string;
   location?: string;
   is_verified: boolean;
 }
 
 export interface Agent {
-  agent_id: number;
-  user_id: number;
-  depot_id: number;
+  agent_id: string;
+  user_id: string;
+  depot_id: string;
   is_online: boolean;
 }
 
 export interface Admin {
-  admin_id: number;
-  user_id: number;
+  admin_id: string;
+  user_id: string;
   scope?: string;
-  scope_id?: number;
+  scope_id?: string;
 }
 
 export interface Depot {
-  depot_id: number;
+  depot_id: string;
   depot_name: string;
   location?: string;
   grain_stock: number;
   capacity_threshold: number;
-  district_id: number;
-}
-
-export interface FarmerDeliverRecord {
-  record_id: number;
-  farmer_id: number;
-  depot_id: number;
-  crop_type: string;
-  weight: number;
-  moisture_content?: number;
-  grade?: string;
-  recorded_at: string;
+  district_id: string;
 }
 
 export interface DepotStock {
-  stock_id: number;
-  depot_id: number;
+  stock_id: string;
+  depot_id: string;
+  product_type: string;
   quantity: number;
-  unit_price?: number;
-  type: string;
+  unit_price: number;
+  unit?: string;
 }
 
 export interface Dispatch {
-  dispatch_id: number;
-  depot_id: number;
-  dispatcher_id: number;
-  receiver_id?: number;
+  dispatch_id: string;
+  depot_id: string;
+  dispatcher_id: string;
+  receiver_id?: string;
   bag_count: number;
   truck_reg?: string;
   status: 'LOADING' | 'IN_TRANSIT' | 'DELIVERED' | 'DELAYED';
 }
 
 export interface Wallet {
-  wallet_id: number;
-  user_id: number;
+  wallet_id: string;
+  user_id: string;
   balance: number;
   bank_account?: string;
-  cell_number?: number;
+  cell_number?: string;
+  cell_num?: number;
 }
 
 export interface Voucher {
-  voucher_id: number;
+  voucher_id: string;
+  farmer_id: string;
   status: 'PENDING' | 'REDEEMED' | 'EXPIRED';
-  farmer_id: number;
-  dealer_id?: number;
-  pin_code?: number;
+  input_type: string;
   amount: number;
-  input_type?: string;
-  expiry_date?: string;
-  redeemed_at?: string;
+  pin_code: string;
+  expiry_date: string;
+  redeemed_at?: string | null;
 }
 
-export interface Payment {
-  transaction_id: number;
+export interface Transaction {
+  transaction_id: string;
+  user_id: string;
   amount: number;
   payment_method: string;
-  status: 'PROCESSING' | 'COMPLETED' | 'FAILED';
-  user_id: number;
-  reference?: string;
-  voucher_id?: number;
+  status: 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'PENDING';
+  reference: string;
+  description: string;
+  date: string;
+}
+
+export interface PaymentRecord {
+  payment_id: string;
+  name: string;
+  nrc: string;
+  qty: number;
+  amount: number;
+  method: string;
+  status: 'APPROVED' | 'PENDING' | 'CANCELLED';
+  district: string;
+  created_at?: string;
+  processed_at?: string;
+}
+
+export interface DeliveryRecord {
+  delivery_id: string;
+  farmer_id: string;
+  depot_id?: string;
+  crop_type: string;
+  weight: number;
+  grade?: string;
+  recorded_at: string;
 }
 
 export interface AgroDealerStock {
-  stock_id: number;
-  dealer_id: number;
+  stock_id: string;
+  dealer_id: string;
   quantity: number;
   unit_price: number;
   product_type: string;
@@ -138,9 +156,9 @@ export interface AgroDealerStock {
 }
 
 export interface AnalyticsReport {
-  report_id: number;
+  report_id: string;
   redemption_rate?: number;
-  district_id?: number;
+  district_id?: string;
   fraud_flags?: number;
   stock_summary?: string;
   generated_at: string;
@@ -166,37 +184,6 @@ export interface AgronomyInsight {
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
   validUntil: string;
   tags: string[];
-}
-
-export interface Transaction {
-  id: string;
-  farmerId: string;
-  amount: number;
-  type: 'PAYOUT' | 'WITHDRAWAL' | 'DEPOSIT';
-  source: string;
-  status: 'COMPLETED' | 'PENDING' | 'FAILED';
-  date: string;
-}
-
-export interface PaymentRecord {
-  payment_id: string;
-  name: string;
-  nrc: string;
-  qty: number;
-  amount: number;
-  method: string;
-  status: 'APPROVED' | 'PENDING' | 'CANCELLED';
-  district: string;
-}
-
-export interface DeliveryRecord {
-  delivery_id: string;
-  farmer_id: string;
-  depot_id: string;
-  crop_type: string;
-  weight: number;
-  grade: string;
-  recorded_at: string;
 }
 
 export interface Shipment {

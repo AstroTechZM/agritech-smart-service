@@ -88,8 +88,8 @@ const {
   getAdminStats,
   getProductionInsights,
   getDeliveryRecords,
-  getInventory, // This will now fetch unit from DB
-  getFarmProductionRecords, // New function
+  getInventory,
+  getFarmProductionRecords,
   updateUser,
   getDailyIntakeSummary
 } = storage;

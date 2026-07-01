@@ -20,7 +20,15 @@ export const stockApi = {
    * Fetches active vouchers for the logged-in farmer.
    */
   fetchVouchers: async () => {
-    return apiClient.get<Voucher[]>('/vouchers');
+    const rawVouchers = await apiClient.get<any[]>('/vouchers');
+    return rawVouchers.map(v => ({
+      id: v.voucher_id,
+      type: v.input_type || 'FISP Input',
+      status: v.status === 'PENDING' ? 'ACTIVE' : v.status, // Map DB PENDING to UI ACTIVE
+      pin: v.pin_code,
+      expiryDate: v.expiry_date,
+      amount: v.amount
+    })) as Voucher[];
   },
 
   /**

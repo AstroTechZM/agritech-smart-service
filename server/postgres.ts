@@ -14,13 +14,15 @@ import {
   ADMIN_STATS
 } from './data';
 
-const connectionString = process.env.DATABASE_URL || '';
-if (!connectionString) {
-  throw new Error('Missing DATABASE_URL for Postgres adapter');
-}
+
 
 const poolConfig: PoolConfig = {
-  connectionString,
+  user: process.env.PGUSER,
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  password: process.env.PGPASSWORD,
+  port: Number(process.env.PGPORT),
+  
   ssl: {
     rejectUnauthorized: false
   }
@@ -257,7 +259,7 @@ const seedIfEmpty = async () => {
     try {
       await client.query('BEGIN');
       for (const d of DEPOT_STOCK) {
-        await client.query(insert, [String(d.stock_id), d.depot_id, d.product_type, d.quantity, d.unit_price, 'Bags']); // Default to 'Bags'
+        await client.query(insert, [String(d.stock_id), d.depot_id, d.product_type, d.quantity, d.unit_price]); // Default to 'Bags'
       }
       await client.query('COMMIT');
     } finally { client.release(); }

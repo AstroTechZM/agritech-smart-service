@@ -7,3 +7,5 @@ coverage/
 .env*
 !.env.example
 vite.config.ts
+system_process_analysis.md
+api_contract.md
